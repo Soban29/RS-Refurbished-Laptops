@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: rs-refurbished-laptops
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server.js
+    envVars:
+      - key: PORT
+        value: 5000
+      - key: NODE_ENV
+        value: production

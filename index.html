@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230067b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect width='20' height='14' x='2' y='3' rx='2'/><line x1='8' x2='16' y1='21' y2='21'/><line x1='12' x2='12' y1='17' y2='21'/></svg>" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover" />
+    <meta name="theme-color" content="#0067b8" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <title>RS Refurbished Laptops & Services | Premium Certified Laptops for Individuals & Enterprise</title>
+    <meta name="description" content="RS Refurbished Laptops and Services - Certified Grade-A Refurbished Laptops for Individuals, Startups, and Corporate Enterprises. 32-Point Quality Inspected with 1-Month Testing Warranty." />
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+      // Intelligent launcher for when index.html is opened directly via file://
+      if (window.location.protocol === 'file:') {
+        // Try detecting running dev server or backend server before redirecting
+        const checkServers = async () => {
+          const statusText = document.getElementById('launch-status');
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 1200);
+            await fetch('http://localhost:3000', { mode: 'no-cors', signal: controller.signal });
+            clearTimeout(timeout);
+            window.location.href = 'http://localhost:3000';
+            return;
+          } catch (e) {}
+
+          try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 1200);
+            await fetch('http://localhost:5000/api/health', { signal: controller.signal });
+            clearTimeout(timeout);
+            window.location.href = 'http://localhost:5000';
+            return;
+          } catch (e) {}
+
+          if (statusText) {
+            statusText.textContent = 'Servers offline. Please run Launch-Dev.bat or Launch-Website.bat first.';
+            statusText.style.color = '#dc2626';
+          }
+        };
+
+        // Check on load and poll every 3 seconds so user can just start the bat file
+        window.addEventListener('DOMContentLoaded', () => {
+          checkServers();
+          setInterval(checkServers, 3000);
+        });
+      }
+    </script>
+  </head>
+  <body class="bg-slate-50 text-slate-800 antialiased selection:bg-brand-500 selection:text-white min-h-screen">
+    <div id="root">
+      <div style="font-family: system-ui, -apple-system, sans-serif; max-width: 620px; margin: 40px auto; padding: 36px; background: white; border-radius: 20px; box-shadow: 0 20px 40px -15px rgba(0,0,0,0.12); text-align: center; border: 1px solid #e2e8f0;">
+        <div style="font-size: 52px; margin-bottom: 12px;">💻</div>
+        <h2 style="color: #0f172a; margin: 0 0 8px 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px;">RS Refurbished Laptops & Services</h2>
+        <p style="color: #64748b; font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+          Certified Refurbished Laptops with <strong>1-Month Testing Warranty</strong>. Tested & serviced with 32-point diagnostics.
+        </p>
+
+        <!-- Official Store Details Card -->
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; text-align: left; margin-bottom: 20px; font-size: 13px; line-height: 1.7; color: #334155;">
+          <div style="font-weight: 700; color: #0f172a; margin-bottom: 6px; font-size: 13.5px;">📍 Store & Contact Information:</div>
+          <div>• <strong>Address:</strong> Sant Tukaram Nagar, Pimpri, Pune 411018, Maharashtra</div>
+          <div>• <strong>Phone / WhatsApp:</strong> +91 8668848486</div>
+          <div>• <strong>Email:</strong> sales@rsrefurbishedlaptops.com</div>
+          <div>• <strong>Website:</strong> rsrefurbishedlaptops.com</div>
+          <div>• <strong>Warranty:</strong> 1-Month Testing Warranty (Zero GST / No Tax added)</div>
+        </div>
+
+        <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 18px; text-align: left; margin-bottom: 20px;">
+          <div style="font-weight: 700; color: #166534; font-size: 13.5px; margin-bottom: 10px; display: flex; align-items: center; gap: 8px;">
+            <span style="display: inline-block; width: 8px; height: 8px; background: #16a34a; border-radius: 50%;"></span>
+            How to open the full interactive website:
+          </div>
+          <ol style="margin: 0; padding-left: 20px; color: #1e3a2b; font-size: 13px; line-height: 1.8;">
+            <li>
+              <strong>Option 1 (Recommended):</strong> Double-click <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 600; color: #15803d;">Launch-Dev.bat</code> in this project folder.
+            </li>
+            <li>
+              <strong>Option 2 (Full-Stack + DB):</strong> Double-click <code style="background: #dcfce7; padding: 2px 6px; border-radius: 4px; font-family: monospace; font-weight: 600; color: #15803d;">Launch-Website.bat</code>.
+            </li>
+          </ol>
+        </div>
+
+        <div id="launch-status" style="font-size: 13px; font-weight: 600; color: #0284c7; margin-bottom: 18px;">
+          ⏳ Checking for active server... This page will automatically open once started.
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; max-width: 400px; margin: 0 auto;">
+          <a href="http://localhost:3000" style="display: block; padding: 13px 20px; background: #0067b8; color: #ffffff; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 14px; box-shadow: 0 4px 10px -2px rgba(0,103,184,0.4);">
+            🚀 Open Vite Dev Site (localhost:3000)
+          </a>
+          <a href="http://localhost:5000" style="display: block; padding: 11px 20px; background: #ffffff; color: #0284c7; text-decoration: none; border-radius: 10px; font-weight: 600; font-size: 13.5px; border: 1.5px solid #bae6fd;">
+            📦 Open Database Server (localhost:5000)
+          </a>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
+</html>

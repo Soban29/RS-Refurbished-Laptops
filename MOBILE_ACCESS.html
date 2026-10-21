@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RS Refurbished Laptops - Mobile Live Access</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    body {
+      background: linear-gradient(135deg, #090e1a 0%, #0f172a 50%, #1e1b4b 100%);
+      color: #f1f5f9;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+    .card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-radius: 24px;
+      padding: 36px 32px;
+      max-width: 620px;
+      width: 100%;
+      box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7), 0 0 40px rgba(59, 130, 246, 0.15);
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+    .glow-header {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 9999px;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.35);
+      color: #34d399;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #ffffff;
+      line-height: 1.25;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+    .qr-container {
+      background: #ffffff;
+      padding: 16px;
+      border-radius: 20px;
+      display: inline-block;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35);
+      margin-bottom: 20px;
+      border: 3px solid #3b82f6;
+    }
+    .qr-container img {
+      display: block;
+      width: 210px;
+      height: 210px;
+      border-radius: 8px;
+    }
+    .url-box {
+      background: rgba(30, 41, 59, 0.8);
+      border: 1px solid rgba(96, 165, 250, 0.3);
+      padding: 14px 18px;
+      border-radius: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 22px;
+      text-align: left;
+    }
+    .url-text {
+      font-family: monospace;
+      font-size: 14px;
+      color: #60a5fa;
+      font-weight: 600;
+      word-break: break-all;
+    }
+    .copy-btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .copy-btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+    .action-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    .btn-action {
+      padding: 12px 18px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 700;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.2s ease;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 20px rgba(37, 99, 235, 0.6);
+      transform: translateY(-2px);
+    }
+    .btn-whatsapp {
+      background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+    }
+    .btn-whatsapp:hover {
+      box-shadow: 0 6px 20px rgba(16, 185, 129, 0.6);
+      transform: translateY(-2px);
+    }
+    .features-list {
+      background: rgba(15, 23, 42, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 14px;
+      padding: 16px;
+      text-align: left;
+    }
+    .features-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #94a3b8;
+      font-weight: 700;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .feature-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #cbd5e1;
+      margin-bottom: 8px;
+    }
+    .feature-item:last-child {
+      margin-bottom: 0;
+    }
+    .badge-check {
+      color: #10b981;
+      font-size: 16px;
+      line-height: 1;
+    }
+    .footer-note {
+      font-size: 12px;
+      color: #64748b;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="glow-header">
+      <span class="pulse-dot"></span>
+      Global Online Live Access
+    </div>
+
+    <h1>Scan & Open on Mobile (Any Network)</h1>
+    <p class="subtitle">
+      Works on <strong>Jio, Airtel, Vi, 4G, 5G, or any external Wi-Fi</strong> anywhere in India or the world. You do <u>not</u> need to be on the same Wi-Fi.
+    </p>
+
+    <!-- QR Code generated from Public Cloudflare Tunnel URL -->
+    <div class="qr-container">
+      <img id="qrImage" src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=https%3A%2F%2Fclan-ending-best-dental.trycloudflare.com" alt="Mobile QR Code for RS Refurbished Laptops">
+    </div>
+
+    <!-- URL Box with Copy Button -->
+    <div class="url-box">
+      <span class="url-text" id="liveUrl">https://clan-ending-best-dental.trycloudflare.com</span>
+      <button class="copy-btn" id="copyBtn" onclick="copyLink()">
+        <span>📋</span> Copy
+      </button>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-grid">
+      <a href="https://clan-ending-best-dental.trycloudflare.com" target="_blank" rel="noopener noreferrer" class="btn-action btn-primary">
+        <span>🌐</span> Open Site
+      </a>
+      <a href="https://api.whatsapp.com/send?text=Check%20out%20RS%20Refurbished%20Laptops%20Store%3A%20https%3A%2F%2Fclan-ending-best-dental.trycloudflare.com" target="_blank" rel="noopener noreferrer" class="btn-action btn-whatsapp">
+        <span>💬</span> Share WhatsApp
+      </a>
+    </div>
+
+    <!-- Feature Checklist -->
+    <div class="features-list">
+      <div class="features-title">
+        <span>⚡</span> Network & Security Status
+      </div>
+      <div class="feature-item">
+        <span class="badge-check">✓</span>
+        <span><strong>Any Cellular Data:</strong> Works on 4G / 5G / Remote Wi-Fi</span>
+      </div>
+      <div class="feature-item">
+        <span class="badge-check">✓</span>
+        <span><strong>Mobile Optimized:</strong> Sticky Bottom Navigation + WhatsApp 1-tap</span>
+      </div>
+      <div class="feature-item">
+        <span class="badge-check">✓</span>
+        <span><strong>SSL Encrypted:</strong> Secure HTTPS powered by Cloudflare Edge Network</span>
+      </div>
+      <div class="feature-item">
+        <span class="badge-check">✓</span>
+        <span><strong>Testing Warranty:</strong> 1-Month Testing Warranty visible on every model</span>
+      </div>
+      <div class="feature-item">
+        <span class="badge-check">✓</span>
+        <span><strong>Company Address:</strong> Sant Tukaram Nagar, Pimpri, Pune 411018, Maharashtra</span>
+      </div>
+    </div>
+
+    <div class="footer-note">
+      RS Refurbished Laptops & Services &bull; Helpline: +91 8668848486
+    </div>
+  </div>
+
+  <script>
+    function copyLink() {
+      const url = document.getElementById('liveUrl').innerText;
+      navigator.clipboard.writeText(url).then(() => {
+        const btn = document.getElementById('copyBtn');
+        btn.innerHTML = '<span>✓</span> Copied!';
+        btn.style.background = '#10b981';
+        setTimeout(() => {
+          btn.innerHTML = '<span>📋</span> Copy';
+          btn.style.background = '#2563eb';
+        }, 2500);
+      }).catch(err => {
+        alert('Copied link: ' + url);
+      });
+    }
+  </script>
+</body>
+</html>

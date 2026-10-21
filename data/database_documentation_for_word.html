@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Database Tables & Data Dictionary - RS Refurbished Laptops</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Calibri, Arial, sans-serif;
+      margin: 40px;
+      color: #1e293b;
+      line-height: 1.5;
+    }
+    h1 {
+      color: #0f172a;
+      border-bottom: 2px solid #0284c7;
+      padding-bottom: 8px;
+      font-size: 24px;
+    }
+    h2 {
+      color: #0369a1;
+      margin-top: 30px;
+      font-size: 18px;
+      border-bottom: 1px solid #cbd5e1;
+      padding-bottom: 5px;
+    }
+    h3 {
+      color: #334155;
+      font-size: 15px;
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 25px;
+      font-size: 12px;
+    }
+    th, td {
+      border: 1px solid #cbd5e1;
+      padding: 8px 10px;
+      text-align: left;
+    }
+    th {
+      background-color: #f1f5f9;
+      color: #0f172a;
+      font-weight: 700;
+    }
+    tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 10px;
+      font-weight: bold;
+      border-radius: 4px;
+      background-color: #e0f2fe;
+      color: #0369a1;
+    }
+    .meta-box {
+      background-color: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 6px;
+      padding: 12px 18px;
+      margin-bottom: 20px;
+      font-size: 13px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>RS Refurbished Laptops & Services — Database Documentation</h1>
+  
+  <div class="meta-box">
+    <strong>Database File:</strong> data/rs_refurbished_database.json<br>
+    <strong>Architecture:</strong> JSON Document Store (Persistent Primary Database)<br>
+    <strong>Total Tables:</strong> 5 (users, laptops, orders, inquiries, serviceTickets)<br>
+    <strong>Official Helpline:</strong> +91 8668848486
+  </div>
+
+  <h2>PART 1: DATA TABLES (SCHEMA SPECIFICATIONS)</h2>
+  <p><em>Columns: Field Name | Datatype | Size | Constraints</em></p>
+
+  <h3>1. Table: users</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Field Name</th>
+        <th style="width: 20%;">Datatype</th>
+        <th style="width: 15%;">Size</th>
+        <th style="width: 40%;">Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>VARCHAR</td><td>50</td><td>PRIMARY KEY, NOT NULL</td></tr>
+      <tr><td>name</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>email</td><td>VARCHAR</td><td>150</td><td>UNIQUE, NOT NULL</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>25</td><td>NULL</td></tr>
+      <tr><td>role</td><td>VARCHAR</td><td>20</td><td>NOT NULL, DEFAULT 'customer'</td></tr>
+      <tr><td>provider</td><td>VARCHAR</td><td>30</td><td>NOT NULL, DEFAULT 'email'</td></tr>
+      <tr><td>avatar</td><td>VARCHAR</td><td>500</td><td>NULL</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+      <tr><td>lastLogin</td><td>TIMESTAMP</td><td>30</td><td>NULL</td></tr>
+    </tbody>
+  </table>
+
+  <h3>2. Table: laptops</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Field Name</th>
+        <th style="width: 20%;">Datatype</th>
+        <th style="width: 15%;">Size</th>
+        <th style="width: 40%;">Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>VARCHAR</td><td>50</td><td>PRIMARY KEY, NOT NULL</td></tr>
+      <tr><td>name</td><td>VARCHAR</td><td>150</td><td>NOT NULL</td></tr>
+      <tr><td>brand</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>model</td><td>VARCHAR</td><td>100</td><td>NULL</td></tr>
+      <tr><td>price</td><td>DECIMAL</td><td>10, 2</td><td>NOT NULL, CHECK (price &gt;= 0)</td></tr>
+      <tr><td>originalPrice</td><td>DECIMAL</td><td>10, 2</td><td>NULL</td></tr>
+      <tr><td>category</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>targetAudience</td><td>JSON / ARRAY</td><td>255</td><td>NULL</td></tr>
+      <tr><td>conditionGrade</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>processor</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>processorFamily</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>ram</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>ramSize</td><td>INT</td><td>4</td><td>NOT NULL, CHECK (ramSize &gt; 0)</td></tr>
+      <tr><td>storage</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>storageSize</td><td>INT</td><td>6</td><td>NOT NULL, CHECK (storageSize &gt; 0)</td></tr>
+      <tr><td>display</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>screenSize</td><td>DECIMAL</td><td>4, 1</td><td>NOT NULL</td></tr>
+      <tr><td>gpu</td><td>VARCHAR</td><td>100</td><td>NULL</td></tr>
+      <tr><td>os</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>warrantyMonths</td><td>INT</td><td>3</td><td>NOT NULL, DEFAULT 12</td></tr>
+      <tr><td>batteryHealth</td><td>VARCHAR</td><td>30</td><td>NULL</td></tr>
+      <tr><td>stockCount</td><td>INT</td><td>6</td><td>NOT NULL, DEFAULT 0, CHECK (stockCount &gt;= 0)</td></tr>
+      <tr><td>inStock</td><td>BOOLEAN</td><td>1</td><td>NOT NULL, DEFAULT true</td></tr>
+      <tr><td>inspectionScore</td><td>VARCHAR</td><td>50</td><td>NULL</td></tr>
+      <tr><td>featured</td><td>BOOLEAN</td><td>1</td><td>NOT NULL, DEFAULT false</td></tr>
+      <tr><td>tags</td><td>JSON / ARRAY</td><td>255</td><td>NULL</td></tr>
+      <tr><td>image</td><td>VARCHAR</td><td>500</td><td>NOT NULL</td></tr>
+      <tr><td>description</td><td>TEXT</td><td>65535</td><td>NULL</td></tr>
+      <tr><td>specs</td><td>JSON</td><td>65535</td><td>NULL</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3. Table: orders</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Field Name</th>
+        <th style="width: 20%;">Datatype</th>
+        <th style="width: 15%;">Size</th>
+        <th style="width: 40%;">Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>VARCHAR</td><td>50</td><td>PRIMARY KEY, NOT NULL</td></tr>
+      <tr><td>quoteNumber</td><td>VARCHAR</td><td>50</td><td>NOT NULL</td></tr>
+      <tr><td>date</td><td>DATE</td><td>10</td><td>NOT NULL</td></tr>
+      <tr><td>month</td><td>VARCHAR</td><td>10</td><td>NULL</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>customerPhone</td><td>VARCHAR</td><td>25</td><td>NOT NULL</td></tr>
+      <tr><td>customerEmail</td><td>VARCHAR</td><td>150</td><td>NULL</td></tr>
+      <tr><td>companyName</td><td>VARCHAR</td><td>150</td><td>NULL</td></tr>
+      <tr><td>companyPhone</td><td>VARCHAR</td><td>25</td><td>NULL</td></tr>
+      <tr><td>gstin</td><td>VARCHAR</td><td>15</td><td>NULL</td></tr>
+      <tr><td>items</td><td>JSON / ARRAY</td><td>65535</td><td>NOT NULL</td></tr>
+      <tr><td>quantity</td><td>INT</td><td>6</td><td>NOT NULL, CHECK (quantity &gt; 0)</td></tr>
+      <tr><td>tier</td><td>VARCHAR</td><td>50</td><td>NULL, DEFAULT 'Individual'</td></tr>
+      <tr><td>totalAmount</td><td>DECIMAL</td><td>12, 2</td><td>NOT NULL, CHECK (totalAmount &gt;= 0)</td></tr>
+      <tr><td>amountPaid</td><td>DECIMAL</td><td>12, 2</td><td>NOT NULL, DEFAULT 0</td></tr>
+      <tr><td>paymentStatus</td><td>VARCHAR</td><td>30</td><td>NOT NULL, DEFAULT 'Pending'</td></tr>
+      <tr><td>paymentMode</td><td>VARCHAR</td><td>50</td><td>NULL</td></tr>
+      <tr><td>paymentRef</td><td>VARCHAR</td><td>100</td><td>NULL</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>50</td><td>NOT NULL, DEFAULT 'Payment Confirmed'</td></tr>
+      <tr><td>notes</td><td>TEXT</td><td>65535</td><td>NULL</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+    </tbody>
+  </table>
+
+  <h3>4. Table: inquiries</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Field Name</th>
+        <th style="width: 20%;">Datatype</th>
+        <th style="width: 15%;">Size</th>
+        <th style="width: 40%;">Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>VARCHAR</td><td>50</td><td>PRIMARY KEY, NOT NULL</td></tr>
+      <tr><td>date</td><td>DATE</td><td>10</td><td>NOT NULL</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>companyName</td><td>VARCHAR</td><td>150</td><td>NULL</td></tr>
+      <tr><td>clientType</td><td>VARCHAR</td><td>50</td><td>NOT NULL, DEFAULT 'Corporate'</td></tr>
+      <tr><td>email</td><td>VARCHAR</td><td>150</td><td>NULL</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>25</td><td>NOT NULL</td></tr>
+      <tr><td>laptopModel</td><td>VARCHAR</td><td>150</td><td>NOT NULL</td></tr>
+      <tr><td>quantity</td><td>INT</td><td>6</td><td>NOT NULL, DEFAULT 1</td></tr>
+      <tr><td>budgetPerUnit</td><td>VARCHAR</td><td>50</td><td>NULL</td></tr>
+      <tr><td>serviceType</td><td>VARCHAR</td><td>100</td><td>NULL</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>30</td><td>NOT NULL, DEFAULT 'Pending'</td></tr>
+      <tr><td>notes</td><td>TEXT</td><td>65535</td><td>NULL</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+    </tbody>
+  </table>
+
+  <h3>5. Table: serviceTickets</h3>
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 25%;">Field Name</th>
+        <th style="width: 20%;">Datatype</th>
+        <th style="width: 15%;">Size</th>
+        <th style="width: 40%;">Constraints</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>id</td><td>VARCHAR</td><td>50</td><td>PRIMARY KEY, NOT NULL</td></tr>
+      <tr><td>date</td><td>DATE</td><td>10</td><td>NOT NULL</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>100</td><td>NOT NULL</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>25</td><td>NOT NULL</td></tr>
+      <tr><td>laptopBrandModel</td><td>VARCHAR</td><td>150</td><td>NOT NULL</td></tr>
+      <tr><td>issueType</td><td>VARCHAR</td><td>200</td><td>NOT NULL</td></tr>
+      <tr><td>serviceCategory</td><td>VARCHAR</td><td>100</td><td>NULL</td></tr>
+      <tr><td>estimatedCost</td><td>VARCHAR</td><td>50</td><td>NULL</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>50</td><td>NOT NULL, DEFAULT 'Pending Inspection'</td></tr>
+      <tr><td>pickupRequired</td><td>BOOLEAN</td><td>1</td><td>NOT NULL, DEFAULT false</td></tr>
+      <tr><td>address</td><td>VARCHAR</td><td>255</td><td>NULL</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>30</td><td>NOT NULL</td></tr>
+    </tbody>
+  </table>
+
+  <br>
+  <h2>PART 2: DATA DICTIONARY</h2>
+  <p><em>Columns: Field Name | Datatype | Description | Table Name</em></p>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width: 20%;">Field Name</th>
+        <th style="width: 15%;">Datatype</th>
+        <th style="width: 50%;">Description</th>
+        <th style="width: 15%;">Table Name</th>
+      </tr>
+    </thead>
+    <tbody>
+      <!-- USERS -->
+      <tr><td>id</td><td>VARCHAR</td><td>Unique identifier for registered user account</td><td>users</td></tr>
+      <tr><td>name</td><td>VARCHAR</td><td>Full legal name of user</td><td>users</td></tr>
+      <tr><td>email</td><td>VARCHAR</td><td>Unique user login email address</td><td>users</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>Mobile contact number with country code</td><td>users</td></tr>
+      <tr><td>role</td><td>VARCHAR</td><td>Authorization access role ('customer' or 'admin')</td><td>users</td></tr>
+      <tr><td>provider</td><td>VARCHAR</td><td>Sign-in method ('email', 'google', or 'owner_portal')</td><td>users</td></tr>
+      <tr><td>avatar</td><td>VARCHAR</td><td>Public URL to user profile avatar picture</td><td>users</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>Account registration ISO-8601 timestamp</td><td>users</td></tr>
+      <tr><td>lastLogin</td><td>TIMESTAMP</td><td>Timestamp of most recent user login</td><td>users</td></tr>
+
+      <!-- LAPTOPS -->
+      <tr><td>id</td><td>VARCHAR</td><td>Unique product SKU identifier for laptop</td><td>laptops</td></tr>
+      <tr><td>name</td><td>VARCHAR</td><td>Full commercial title of laptop model</td><td>laptops</td></tr>
+      <tr><td>brand</td><td>VARCHAR</td><td>Manufacturer brand (Dell, Lenovo, Apple, HP, Asus)</td><td>laptops</td></tr>
+      <tr><td>model</td><td>VARCHAR</td><td>Hardware model or series number</td><td>laptops</td></tr>
+      <tr><td>price</td><td>DECIMAL</td><td>Current discounted sale price in INR (₹)</td><td>laptops</td></tr>
+      <tr><td>originalPrice</td><td>DECIMAL</td><td>Original brand-new retail MRP in INR (₹)</td><td>laptops</td></tr>
+      <tr><td>category</td><td>VARCHAR</td><td>Category (Business, Ultrabook, Creative &amp; Professional, Workstation)</td><td>laptops</td></tr>
+      <tr><td>targetAudience</td><td>JSON / ARRAY</td><td>Recommended buyer segments (Individual, Corporate, Student)</td><td>laptops</td></tr>
+      <tr><td>conditionGrade</td><td>VARCHAR</td><td>Cosmetic and functional grade (Grade A+, Grade A)</td><td>laptops</td></tr>
+      <tr><td>processor</td><td>VARCHAR</td><td>Complete processor name, generation, and clock speed</td><td>laptops</td></tr>
+      <tr><td>processorFamily</td><td>VARCHAR</td><td>CPU grouping family for filtering (Intel Core i3/i5/i7, Apple Silicon)</td><td>laptops</td></tr>
+      <tr><td>ram</td><td>VARCHAR</td><td>Formatted RAM specification with upgrade expandability</td><td>laptops</td></tr>
+      <tr><td>ramSize</td><td>INT</td><td>Numeric RAM memory capacity in Gigabytes (GB)</td><td>laptops</td></tr>
+      <tr><td>storage</td><td>VARCHAR</td><td>Formatted drive specification and bus type (e.g., NVMe SSD)</td><td>laptops</td></tr>
+      <tr><td>storageSize</td><td>INT</td><td>Numeric SSD/HDD storage capacity in Gigabytes (GB)</td><td>laptops</td></tr>
+      <tr><td>display</td><td>VARCHAR</td><td>Screen panel specifications, anti-glare finish, and resolution</td><td>laptops</td></tr>
+      <tr><td>screenSize</td><td>DECIMAL</td><td>Diagonal display measurement in inches</td><td>laptops</td></tr>
+      <tr><td>gpu</td><td>VARCHAR</td><td>Integrated or dedicated graphics processor unit</td><td>laptops</td></tr>
+      <tr><td>os</td><td>VARCHAR</td><td>Preloaded genuine operating system license</td><td>laptops</td></tr>
+      <tr><td>warrantyMonths</td><td>INT</td><td>Hardware warranty protection period in months</td><td>laptops</td></tr>
+      <tr><td>batteryHealth</td><td>VARCHAR</td><td>Certified tested battery capacity percentage</td><td>laptops</td></tr>
+      <tr><td>stockCount</td><td>INT</td><td>Units physically available in warehouse inventory</td><td>laptops</td></tr>
+      <tr><td>inStock</td><td>BOOLEAN</td><td>Inventory availability flag (true if stockCount &gt; 0)</td><td>laptops</td></tr>
+      <tr><td>inspectionScore</td><td>VARCHAR</td><td>Multi-point diagnostic test certification score</td><td>laptops</td></tr>
+      <tr><td>featured</td><td>BOOLEAN</td><td>Flag to display laptop in homepage hero showcase</td><td>laptops</td></tr>
+      <tr><td>tags</td><td>JSON / ARRAY</td><td>Promotional badges (e.g. Best Under 20k, Certified A+)</td><td>laptops</td></tr>
+      <tr><td>image</td><td>VARCHAR</td><td>Direct HTTPS image link for laptop display</td><td>laptops</td></tr>
+      <tr><td>description</td><td>TEXT</td><td>Detailed marketing overview and chassis description</td><td>laptops</td></tr>
+      <tr><td>specs</td><td>JSON</td><td>Hardware specifications object (weight, ports, camera, TPM)</td><td>laptops</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>ISO-8601 record creation timestamp</td><td>laptops</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>ISO-8601 record last updated timestamp</td><td>laptops</td></tr>
+
+      <!-- ORDERS -->
+      <tr><td>id</td><td>VARCHAR</td><td>Unique sales order tracking number</td><td>orders</td></tr>
+      <tr><td>quoteNumber</td><td>VARCHAR</td><td>Official quotation and invoice reference number</td><td>orders</td></tr>
+      <tr><td>date</td><td>DATE</td><td>Date of order placement (YYYY-MM-DD)</td><td>orders</td></tr>
+      <tr><td>month</td><td>VARCHAR</td><td>Accounting month index (YYYY-MM)</td><td>orders</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>Name of buyer or company procurement officer</td><td>orders</td></tr>
+      <tr><td>customerPhone</td><td>VARCHAR</td><td>Contact telephone or WhatsApp number</td><td>orders</td></tr>
+      <tr><td>customerEmail</td><td>VARCHAR</td><td>Email address for digital invoice and receipt delivery</td><td>orders</td></tr>
+      <tr><td>companyName</td><td>VARCHAR</td><td>Registered corporate legal entity name</td><td>orders</td></tr>
+      <tr><td>companyPhone</td><td>VARCHAR</td><td>Corporate office telephone or landline</td><td>orders</td></tr>
+      <tr><td>gstin</td><td>VARCHAR</td><td>15-character Goods and Services Tax ID Number for 18% ITC</td><td>orders</td></tr>
+      <tr><td>items</td><td>JSON / ARRAY</td><td>Array of line items purchased with name, quantity, and unit price</td><td>orders</td></tr>
+      <tr><td>quantity</td><td>INT</td><td>Cumulative quantity count of all laptops ordered</td><td>orders</td></tr>
+      <tr><td>tier</td><td>VARCHAR</td><td>Customer procurement tier (Individual, Startup, Corporate)</td><td>orders</td></tr>
+      <tr><td>totalAmount</td><td>DECIMAL</td><td>Total gross invoice billing amount in INR (₹)</td><td>orders</td></tr>
+      <tr><td>amountPaid</td><td>DECIMAL</td><td>Payment collected to date in INR (₹)</td><td>orders</td></tr>
+      <tr><td>paymentStatus</td><td>VARCHAR</td><td>Payment collection status (Paid, Pending, Partial)</td><td>orders</td></tr>
+      <tr><td>paymentMode</td><td>VARCHAR</td><td>Transaction gateway or method (Online, UPI, NEFT/RTGS, Cash)</td><td>orders</td></tr>
+      <tr><td>paymentRef</td><td>VARCHAR</td><td>Transaction reference, UTR number, or cheque receipt ID</td><td>orders</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>Order dispatch stage (Payment Confirmed, Dispatched, Delivered)</td><td>orders</td></tr>
+      <tr><td>notes</td><td>TEXT</td><td>Special delivery instructions or payment terms</td><td>orders</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>ISO-8601 creation timestamp</td><td>orders</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>ISO-8601 last update timestamp</td><td>orders</td></tr>
+
+      <!-- INQUIRIES -->
+      <tr><td>id</td><td>VARCHAR</td><td>Unique sales quote inquiry reference number</td><td>inquiries</td></tr>
+      <tr><td>date</td><td>DATE</td><td>Date inquiry was submitted (YYYY-MM-DD)</td><td>inquiries</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>Full name of requester</td><td>inquiries</td></tr>
+      <tr><td>companyName</td><td>VARCHAR</td><td>Business or enterprise organization name</td><td>inquiries</td></tr>
+      <tr><td>clientType</td><td>VARCHAR</td><td>Organization category (Corporate, Individual, SME)</td><td>inquiries</td></tr>
+      <tr><td>email</td><td>VARCHAR</td><td>Contact email for dispatching official quote PDF</td><td>inquiries</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>Direct WhatsApp/mobile number for quotation trigger</td><td>inquiries</td></tr>
+      <tr><td>laptopModel</td><td>VARCHAR</td><td>Laptop model or custom configuration requested</td><td>inquiries</td></tr>
+      <tr><td>quantity</td><td>INT</td><td>Required unit volume of laptops</td><td>inquiries</td></tr>
+      <tr><td>budgetPerUnit</td><td>VARCHAR</td><td>Buyer's expected budget per unit in INR (₹)</td><td>inquiries</td></tr>
+      <tr><td>serviceType</td><td>VARCHAR</td><td>Type of procurement (Bulk Purchase, Monthly Rental, Retail Purchase)</td><td>inquiries</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>Lead pipeline stage (Pending, Contacted, Completed)</td><td>inquiries</td></tr>
+      <tr><td>notes</td><td>TEXT</td><td>Detailed procurement notes, RAM/SSD upgrade requests</td><td>inquiries</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>ISO-8601 creation timestamp</td><td>inquiries</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>ISO-8601 last update timestamp</td><td>inquiries</td></tr>
+
+      <!-- SERVICE TICKETS -->
+      <tr><td>id</td><td>VARCHAR</td><td>Unique service repair ticket identification code</td><td>serviceTickets</td></tr>
+      <tr><td>date</td><td>DATE</td><td>Service booking date (YYYY-MM-DD)</td><td>serviceTickets</td></tr>
+      <tr><td>customerName</td><td>VARCHAR</td><td>Client or device owner name</td><td>serviceTickets</td></tr>
+      <tr><td>phone</td><td>VARCHAR</td><td>Contact telephone number for diagnostic updates</td><td>serviceTickets</td></tr>
+      <tr><td>laptopBrandModel</td><td>VARCHAR</td><td>Customer device brand and model brought for repair</td><td>serviceTickets</td></tr>
+      <tr><td>issueType</td><td>VARCHAR</td><td>Reported hardware defect, fault symptom, or service request</td><td>serviceTickets</td></tr>
+      <tr><td>serviceCategory</td><td>VARCHAR</td><td>Service type (Chip-Level, Screen Replacement, RAM/SSD Boost, Corporate AMC)</td><td>serviceTickets</td></tr>
+      <tr><td>estimatedCost</td><td>VARCHAR</td><td>Estimated repair cost quotation in INR (₹)</td><td>serviceTickets</td></tr>
+      <tr><td>status</td><td>VARCHAR</td><td>Repair fulfillment stage (Pending Inspection, In Progress, Completed)</td><td>serviceTickets</td></tr>
+      <tr><td>pickupRequired</td><td>BOOLEAN</td><td>Doorstep pickup request flag (true = doorstep pickup, false = walk-in)</td><td>serviceTickets</td></tr>
+      <tr><td>address</td><td>VARCHAR</td><td>Customer address for pickup and doorstep return delivery</td><td>serviceTickets</td></tr>
+      <tr><td>createdAt</td><td>TIMESTAMP</td><td>ISO-8601 creation timestamp</td><td>serviceTickets</td></tr>
+      <tr><td>updatedAt</td><td>TIMESTAMP</td><td>ISO-8601 last update timestamp</td><td>serviceTickets</td></tr>
+    </tbody>
+  </table>
+
+</body>
+</html>
