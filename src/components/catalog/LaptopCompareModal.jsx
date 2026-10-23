@@ -15,13 +15,17 @@ import {
 import { formatINR } from '../../utils/storage';
 
 export default function LaptopCompareModal({
-  compareList,
+  compareList = [],
   onClose,
   onRemoveFromCompare,
+  onRemove,
   onClearCompare,
   onAddToCart,
-  cart
+  cart = []
 }) {
+  const handleRemove = onRemoveFromCompare || onRemove || (() => {});
+  const handleClear = onClearCompare || onClose;
+
   if (!compareList || compareList.length === 0) return null;
 
   return (
@@ -42,7 +46,7 @@ export default function LaptopCompareModal({
 
           <div className="flex items-center gap-3">
             <button
-              onClick={onClearCompare}
+              onClick={handleClear}
               className="text-xs font-semibold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1"
             >
               <Trash2 className="w-3.5 h-3.5" /> Clear All
@@ -76,15 +80,17 @@ export default function LaptopCompareModal({
 
             {/* Laptop Cards Columns */}
             {compareList.map((laptop) => {
-              const isInCart = cart.some(c => c.id === laptop.id);
-              const discount = Math.round(((laptop.originalPrice - laptop.price) / laptop.originalPrice) * 100);
+              const isInCart = Array.isArray(cart) && cart.some(c => c && c.id === laptop.id);
+              const originalPrice = laptop.originalPrice || (laptop.price ? Math.round(laptop.price * 1.35) : 35000);
+              const price = laptop.price || 0;
+              const discount = originalPrice > price ? Math.round(((originalPrice - price) / originalPrice) * 100) : 25;
 
               return (
                 <div key={laptop.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-200 flex flex-col justify-between relative">
                   
                   {/* Remove Button */}
                   <button
-                    onClick={() => onRemoveFromCompare(laptop.id)}
+                    onClick={() => handleRemove(laptop.id)}
                     className="absolute top-2 right-2 p-1.5 bg-white/90 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-full border border-slate-200 transition-colors"
                     title="Remove from comparison"
                   >

@@ -35,9 +35,12 @@ import {
   Mail,
   Calendar,
   AlertCircle,
-  Copy
+  Copy,
+  FileSpreadsheet
 } from 'lucide-react';
 import { formatINR, exportDataAsJSON } from '../../utils/storage';
+import { exportDatabaseToExcelFile } from '../../utils/excelExport';
+import { INITIAL_ACCESSORIES } from '../../data/accessories';
 import { 
   fetchSqlInfo, 
   fetchSqlTables, 
@@ -1531,6 +1534,45 @@ export default function AdminModal({
               {activeTab === 'data' && (
                 <div className="space-y-6 max-w-2xl mx-auto py-6">
                   
+                  {/* Excel Database Export (.xlsx) Side-by-Side Sync */}
+                  <div className="bg-emerald-50/80 p-6 rounded-2xl border border-emerald-200 space-y-3 shadow-xs">
+                    <div className="flex items-center gap-2 text-emerald-950 font-bold text-sm">
+                      <FileSpreadsheet className="w-5 h-5 text-emerald-600" /> Excel Database (.xlsx) - Side-by-Side Sync
+                    </div>
+                    <p className="text-xs text-emerald-800 leading-relaxed">
+                      Maintained in real-time side-by-side with <code className="bg-white/90 px-1.5 py-0.5 rounded text-emerald-900 font-mono font-bold">data/rs_refurbished_database.xlsx</code>. Includes dedicated styled sheets for Laptops, Accessories, Users, Orders, Inquiries, and Service Tickets.
+                    </p>
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      <button
+                        onClick={async () => {
+                          try {
+                            await exportDatabaseToExcelFile({
+                              laptops,
+                              accessories: INITIAL_ACCESSORIES,
+                              users,
+                              orders,
+                              inquiries,
+                              serviceTickets
+                            });
+                          } catch (err) {
+                            console.error('Client Excel generation failed, falling back to server route:', err);
+                            window.open('/api/data/download-excel', '_blank');
+                          }
+                        }}
+                        className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm transition-all"
+                      >
+                        <Download className="w-4 h-4" /> Create & Download Excel (.xlsx)
+                      </button>
+                      <a
+                        href="/api/data/download-excel"
+                        download="rs_refurbished_database.xlsx"
+                        className="px-4 py-2.5 bg-white border border-emerald-300 hover:bg-emerald-100/70 text-emerald-800 text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-2xs transition-all"
+                      >
+                        <ExternalLink className="w-4 h-4" /> Download Server .xlsx File
+                      </a>
+                    </div>
+                  </div>
+
                   <div className="bg-white p-6 rounded-2xl border border-slate-200 space-y-3 shadow-xs">
                     <div className="flex items-center gap-2 text-slate-900 font-bold text-sm">
                       <Database className="w-5 h-5 text-emerald-600" /> Persistent Database File (rs_refurbished_database.json)
@@ -1542,7 +1584,7 @@ export default function AdminModal({
                       <a
                         href="/api/data/download"
                         download="rs_refurbished_database.json"
-                        className="px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm"
+                        className="px-4 py-2.5 bg-slate-800 hover:bg-slate-900 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm"
                       >
                         <Download className="w-4 h-4" /> Download rs_refurbished_database.json
                       </a>

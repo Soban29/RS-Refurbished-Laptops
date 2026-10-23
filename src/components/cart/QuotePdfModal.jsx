@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { 
   X, 
   Printer, 
@@ -12,8 +12,11 @@ import {
   Building2,
   Calendar,
   Zap,
-  Award
+  Award,
+  Loader2
 } from 'lucide-react';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { formatINR } from '../../utils/storage';
 import { getOrderTier } from '../../utils/orderTiers';
 
@@ -26,6 +29,7 @@ export default function QuotePdfModal({
   onPlaceOrder
 }) {
   const quoteRef = useRef(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   if (!isOpen) return null;
 
@@ -50,6 +54,43 @@ export default function QuotePdfModal({
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const handleDownloadPdf = async () => {
+    if (!quoteRef.current) return;
+    try {
+      setIsGeneratingPdf(true);
+      const canvas = await html2canvas(quoteRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      });
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgWidth = 210; // A4 mm
+      const pageHeight = 297; // A4 mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 5) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+
+      pdf.save(`RS_Refurbished_Quotation_${quoteNumber || 'Document'}.pdf`);
+    } catch (err) {
+      console.error('PDF generation error, falling back to window.print():', err);
+      window.print();
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const whatsappOrderMessage = encodeURIComponent(
@@ -86,12 +127,31 @@ export default function QuotePdfModal({
 
           <div className="flex items-center gap-2">
             <button
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-brand-600 hover:bg-brand-700 transition-colors shadow-sm disabled:opacity-60"
+              title="Download Official PDF file"
+            >
+              {isGeneratingPdf ? (
+                <>
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span>Generating PDF...</span>
+                </>
+              ) : (
+                <>
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Quote (PDF)</span>
+                </>
+              )}
+            </button>
+
+            <button
               onClick={handlePrint}
-              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors shadow-2xs"
-              title="Print or Save as PDF"
+              className="hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 transition-colors shadow-2xs"
+              title="Print or Save via Browser dialog"
             >
               <Printer className="w-3.5 h-3.5 text-brand-600" />
-              <span>Print / Save PDF</span>
+              <span>Print</span>
             </button>
 
             <button
@@ -104,7 +164,7 @@ export default function QuotePdfModal({
         </div>
 
         {/* Printable Quotation Sheet Body */}
-        <div className="p-6 sm:p-10 overflow-y-auto flex-1 space-y-6 print-area bg-white text-slate-900">
+        <div ref={quoteRef} className="p-6 sm:p-10 overflow-y-auto flex-1 space-y-6 print-area bg-white text-slate-900">
           
           {/* 1. Official Letterhead Header */}
           <div className="flex flex-col sm:flex-row items-start justify-between gap-6 pb-6 border-b-2 border-slate-800">

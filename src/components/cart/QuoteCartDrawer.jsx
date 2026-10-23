@@ -264,7 +264,9 @@ export default function QuoteCartDrawer({
                           {item.name}
                         </h4>
                         <p className="text-xs text-slate-500 truncate">
-                          {item.ram} | {item.storage} | {item.conditionGrade}
+                          {item.ram 
+                            ? `${item.ram} | ${item.storage} | ${item.conditionGrade || 'Grade A+'}` 
+                            : `${item.category || 'Genuine Accessory'} | ${item.compatibility || 'Universal'}`}
                         </p>
                         <div className="text-xs font-extrabold text-brand-600 mt-1">
                           {formatINR(item.price)}

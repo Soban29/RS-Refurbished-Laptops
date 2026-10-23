@@ -33,13 +33,16 @@ import {
   getDatabaseStats,
   getSqlDump,
   resetDatabase,
-  loadDatabase
+  loadDatabase,
+  getAccessories
 } from './server/db.js';
+import { syncDatabaseToExcel } from './server/excelSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, 'data');
 const JSON_DB_FILE = path.join(DATA_DIR, 'rs_refurbished_database.json');
+const EXCEL_DB_FILE = path.join(DATA_DIR, 'rs_refurbished_database.xlsx');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -442,6 +445,31 @@ app.get('/api/data/download', (req, res) => {
     } else {
       res.status(404).json({ success: false, error: 'Database file not found' });
     }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Download side-by-side Excel database file (.xlsx)
+app.get('/api/data/download-excel', async (req, res) => {
+  try {
+    const db = loadDatabase();
+    await syncDatabaseToExcel(db);
+    if (fs.existsSync(EXCEL_DB_FILE)) {
+      res.download(EXCEL_DB_FILE, 'rs_refurbished_database.xlsx');
+    } else {
+      res.status(404).json({ success: false, error: 'Excel database file not found' });
+    }
+  } catch (err) {
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+
+// Accessories API
+app.get('/api/accessories', (req, res) => {
+  try {
+    const acc = getAccessories();
+    res.json({ success: true, count: acc.length, data: acc });
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }

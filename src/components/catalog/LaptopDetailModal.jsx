@@ -21,10 +21,12 @@ import {
   Zap,
   Clock,
   AlertTriangle,
-  Sliders
+  Sliders,
+  Package
 } from 'lucide-react';
 import { formatINR } from '../../utils/storage';
 import { QUALITY_INSPECTION_POINTS } from '../../data/servicesData';
+import { INITIAL_ACCESSORIES } from '../../data/accessories';
 
 export default function LaptopDetailModal({
   laptop,
@@ -41,6 +43,7 @@ export default function LaptopDetailModal({
   // Dynamic RAM & Storage Customizer
   const [selectedRam, setSelectedRam] = useState(laptop.ramSize || 16);
   const [selectedStorage, setSelectedStorage] = useState(laptop.storageSize || 512);
+  const [selectedAddons, setSelectedAddons] = useState([]);
 
   const isLaptopInStock = laptop.inStock && (laptop.stockCount > 0 || laptop.stockCount === undefined);
 
@@ -320,12 +323,72 @@ export default function LaptopDetailModal({
                 ))}
               </div>
 
+              {/* Frequently Bought Together Add-ons */}
+              {isConfigAvailable && (
+                <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/80 space-y-2.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] font-bold text-slate-700 flex items-center gap-1.5 uppercase tracking-wider">
+                      <Package className="w-3.5 h-3.5 text-brand-600" /> Frequently Bought With This Laptop
+                    </span>
+                    <span className="text-[10px] text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+                      Bundle & Save
+                    </span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {[
+                      { id: 'acc-04', name: 'Logitech M221 Silent Wireless Mouse', price: 649, original: 1295 },
+                      { id: 'acc-08', name: 'Padded Shockproof Laptop Sleeve', price: 599, original: 1499 },
+                      { id: 'acc-06', name: 'Foldable Aluminum Cooling Stand', price: 749, original: 1899 }
+                    ].map(item => {
+                      const isChecked = selectedAddons.includes(item.id);
+                      return (
+                        <label
+                          key={item.id}
+                          className={`flex items-center justify-between p-2 rounded-xl border text-xs cursor-pointer transition-all ${
+                            isChecked
+                              ? 'bg-brand-50/70 border-brand-300 text-slate-900 font-semibold'
+                              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => {
+                                setSelectedAddons(prev =>
+                                  prev.includes(item.id)
+                                    ? prev.filter(x => x !== item.id)
+                                    : [...prev, item.id]
+                                );
+                              }}
+                              className="rounded text-brand-600 focus:ring-brand-500 w-4 h-4"
+                            />
+                            <span>{item.name}</span>
+                          </div>
+                          <div className="text-right shrink-0">
+                            <span className="font-bold text-slate-900">+{formatINR(item.price)}</span>
+                            <span className="text-[10px] text-slate-400 line-through ml-1.5">{formatINR(item.original)}</span>
+                          </div>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               {/* Action Buttons: Add to Cart and Buy Now OR Temporarily Unavailable Inquiry */}
               <div className="space-y-2 pt-2">
                 {isConfigAvailable ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <button
-                      onClick={() => onAddToCart(customizedLaptop)}
+                      onClick={() => {
+                        onAddToCart(customizedLaptop);
+                        selectedAddons.forEach(addonId => {
+                          const addon = INITIAL_ACCESSORIES.find(a => a.id === addonId);
+                          if (addon) onAddToCart(addon);
+                        });
+                      }}
                       className={`py-3 px-4 rounded-xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all ${isInCart
                           ? 'bg-emerald-50 text-emerald-700 border border-emerald-300'
                           : 'bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300'
@@ -336,7 +399,14 @@ export default function LaptopDetailModal({
                     </button>
 
                     <button
-                      onClick={() => onBuyNow ? onBuyNow(customizedLaptop) : onAddToCart(customizedLaptop)}
+                      onClick={() => {
+                        const buyFn = onBuyNow || onAddToCart;
+                        buyFn(customizedLaptop);
+                        selectedAddons.forEach(addonId => {
+                          const addon = INITIAL_ACCESSORIES.find(a => a.id === addonId);
+                          if (addon) onAddToCart(addon);
+                        });
+                      }}
                       className="py-3 px-4 rounded-xl font-extrabold text-xs sm:text-sm bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-slate-950 flex items-center justify-center gap-2 transition-all shadow-md shadow-amber-500/25 hover:scale-[1.01] active:scale-[0.99]"
                     >
                       <Zap className="w-4 h-4 fill-slate-950" />

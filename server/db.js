@@ -8,6 +8,8 @@ import {
   INITIAL_ORDERS,
   INITIAL_USERS 
 } from '../src/data/initialLaptops.js';
+import { INITIAL_ACCESSORIES } from '../src/data/accessories.js';
+import { syncDatabaseToExcel } from './excelSync.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -20,7 +22,7 @@ if (!fs.existsSync(DATA_DIR)) {
 }
 
 // -------------------------------------------------------------
-// CORE DATABASE LOAD & SAVE (JSON Document Store)
+// CORE DATABASE LOAD & SAVE (JSON Document Store + Side-by-Side Excel)
 // -------------------------------------------------------------
 export const loadDatabase = () => {
   try {
@@ -31,6 +33,7 @@ export const loadDatabase = () => {
         // Ensure standard collections exist
         parsed.users = Array.isArray(parsed.users) ? parsed.users : [...INITIAL_USERS];
         parsed.laptops = Array.isArray(parsed.laptops) ? parsed.laptops : [...INITIAL_LAPTOPS];
+        parsed.accessories = Array.isArray(parsed.accessories) ? parsed.accessories : [...INITIAL_ACCESSORIES];
         parsed.inquiries = Array.isArray(parsed.inquiries) ? parsed.inquiries : [...INITIAL_INQUIRIES];
         parsed.serviceTickets = Array.isArray(parsed.serviceTickets) 
           ? parsed.serviceTickets 
@@ -51,6 +54,7 @@ export const loadDatabase = () => {
     contactPhone: '+91 8668848486',
     users: [...INITIAL_USERS],
     laptops: [...INITIAL_LAPTOPS],
+    accessories: [...INITIAL_ACCESSORIES],
     inquiries: [...INITIAL_INQUIRIES],
     serviceTickets: [...INITIAL_SERVICE_TICKETS],
     orders: [...INITIAL_ORDERS]
@@ -63,11 +67,20 @@ export const saveDatabase = (data) => {
   try {
     data.lastUpdated = new Date().toISOString();
     fs.writeFileSync(JSON_DB_FILE, JSON.stringify(data, null, 2), 'utf-8');
+    // Maintain Excel file side-by-side
+    syncDatabaseToExcel(data).catch(err => {
+      console.warn('[Database] Async Excel sync warning:', err.message);
+    });
     return true;
   } catch (err) {
     console.error('[Database] Failed to write database JSON:', err.message);
     return false;
   }
+};
+
+export const getAccessories = () => {
+  const db = loadDatabase();
+  return [...(db.accessories || [])];
 };
 
 // -------------------------------------------------------------

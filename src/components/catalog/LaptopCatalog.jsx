@@ -16,12 +16,16 @@ import {
   AlertCircle,
   HardDrive,
   Cpu,
-  Tag
+  Tag,
+  Laptop,
+  Package
 } from 'lucide-react';
 import FilterSidebar from './FilterSidebar';
 import LaptopCard from './LaptopCard';
 import LaptopDetailModal from './LaptopDetailModal';
 import LaptopCompareModal from './LaptopCompareModal';
+import AccessoryCard from './AccessoryCard';
+import { INITIAL_ACCESSORIES } from '../../data/accessories';
 import { formatINR } from '../../utils/storage';
 
 export default function LaptopCatalog({ 
@@ -31,6 +35,10 @@ export default function LaptopCatalog({
   onBuyNow,
   onOpenCart 
 }) {
+  const [catalogTab, setCatalogTab] = useState('laptops'); // 'laptops' | 'accessories'
+  const [desktopFilterCollapsed, setDesktopFilterCollapsed] = useState(false);
+  const [selectedAccessoryCategory, setSelectedAccessoryCategory] = useState('All');
+  const [activeQuickPill, setActiveQuickPill] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedLaptopForModal, setSelectedLaptopForModal] = useState(null);
   const [compareList, setCompareList] = useState([]);
@@ -371,6 +379,52 @@ export default function LaptopCatalog({
     setCompareList(prev => prev.filter(item => item.id !== id));
   };
 
+  const applyQuickPill = (pillId) => {
+    setActiveQuickPill(pillId);
+    if (pillId === 'all') {
+      resetFilters();
+    } else if (pillId === 'under-25k') {
+      setFilters(prev => ({ ...prev, minPrice: 0, maxPrice: 25000 }));
+    } else if (pillId === '16gb-ram') {
+      setFilters(prev => ({ ...prev, rams: [16] }));
+    } else if (pillId === 'dell') {
+      setFilters(prev => ({ ...prev, brands: ['Dell'] }));
+    } else if (pillId === 'thinkpad') {
+      setFilters(prev => ({ ...prev, brands: ['Lenovo'] }));
+    } else if (pillId === 'apple') {
+      setFilters(prev => ({ ...prev, brands: ['Apple'] }));
+    } else if (pillId === 'i7') {
+      setFilters(prev => ({ ...prev, processors: ['Intel Core i7'] }));
+    } else if (pillId === 'grade-a') {
+      setFilters(prev => ({ ...prev, grades: ['Grade A+ (Like New)', 'Grade A+ (Pristine)'] }));
+    }
+  };
+
+  const accessoryCategories = [
+    'All',
+    'Power & Chargers',
+    'Peripherals',
+    'Stands & Docks',
+    'Bags & Protection',
+    'Hardware Upgrades'
+  ];
+
+  const filteredAccessories = useMemo(() => {
+    return INITIAL_ACCESSORIES.filter(acc => {
+      if (selectedAccessoryCategory !== 'All' && acc.category !== selectedAccessoryCategory) {
+        return false;
+      }
+      if (searchQuery.trim() !== '') {
+        const q = searchQuery.toLowerCase();
+        return acc.name.toLowerCase().includes(q) ||
+               acc.category.toLowerCase().includes(q) ||
+               (acc.compatibility && acc.compatibility.toLowerCase().includes(q)) ||
+               (acc.description && acc.description.toLowerCase().includes(q));
+      }
+      return true;
+    });
+  }, [searchQuery, selectedAccessoryCategory]);
+
   // Compile human-readable list of selected specs for WhatsApp restock inquiry
   const requestedSpecsList = useMemo(() => {
     const list = [];
@@ -394,20 +448,47 @@ export default function LaptopCatalog({
       <div className="site-container">
         
         {/* Section Title Header */}
-        <div className="text-center max-w-3xl mx-auto mb-10">
+        <div className="text-center max-w-3xl mx-auto mb-8">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-brand-100 text-brand-700 text-xs font-bold mb-3 border border-brand-200">
             <Sparkles className="w-3.5 h-3.5 text-brand-600" /> Certified Refurbished Inventory
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-            Explore Premium Laptops with Warranty
+            Explore Certified Laptops & Accessories
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-2">
-            Every laptop is 32-point tested, graded with genuine licenses, and backed by our comprehensive RS Warranty. Filter by price, brand, and hardware config below.
+            32-point tested laptops and genuine OEM accessories backed by RS Warranty. Filter by specs, price, or browse categories below.
           </p>
         </div>
 
+        {/* Primary Catalog Switcher Tabs */}
+        <div className="flex items-center justify-center gap-3 mb-8">
+          <button
+            onClick={() => { setCatalogTab('laptops'); setSearchQuery(''); }}
+            className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+              catalogTab === 'laptops'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-500/30'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs'
+            }`}
+          >
+            <Laptop className="w-4 h-4" />
+            <span>Certified Laptops ({laptops.length})</span>
+          </button>
+
+          <button
+            onClick={() => { setCatalogTab('accessories'); setSearchQuery(''); }}
+            className={`px-5 py-3 rounded-2xl font-bold text-xs sm:text-sm flex items-center gap-2 transition-all ${
+              catalogTab === 'accessories'
+                ? 'bg-brand-600 text-white shadow-md shadow-brand-500/25 ring-2 ring-brand-500/30'
+                : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 shadow-2xs'
+            }`}
+          >
+            <Package className="w-4 h-4 text-amber-500" />
+            <span>Laptop Accessories & Upgrades ({INITIAL_ACCESSORIES.length})</span>
+          </button>
+        </div>
+
         {/* Top Control Bar: Search & Sort */}
-        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-8 flex flex-col md:flex-row items-center justify-between gap-4">
+        <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200 mb-6 flex flex-col md:flex-row items-center justify-between gap-4">
           
           {/* Live Search Input */}
           <div className="relative w-full md:w-96">
@@ -416,7 +497,11 @@ export default function LaptopCatalog({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by ThinkPad, MacBook, i7, 16GB, Dell..."
+              placeholder={
+                catalogTab === 'laptops'
+                  ? "Search by ThinkPad, MacBook, i7, 16GB, Dell..."
+                  : "Search chargers, Logitech mouse, bags, RAM, SSD..."
+              }
               className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
             />
             {searchQuery && (
@@ -432,51 +517,132 @@ export default function LaptopCatalog({
           {/* Controls Right */}
           <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto">
             
-            {/* Mobile Filter Toggle */}
-            <button
-              onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
-              className="lg:hidden flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
-            >
-              <Filter className="w-3.5 h-3.5 text-brand-600" />
-              <span>Filters {activeFilterCount > 0 && `(${activeFilterCount})`}</span>
-            </button>
+            {catalogTab === 'laptops' && (
+              <>
+                {/* Desktop Toggle Filter Sidebar Button */}
+                <button
+                  onClick={() => setDesktopFilterCollapsed(!desktopFilterCollapsed)}
+                  className="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold transition-colors"
+                  title="Toggle sidebar to view full screen grid"
+                >
+                  <SlidersHorizontal className="w-3.5 h-3.5 text-brand-600" />
+                  <span>{desktopFilterCollapsed ? 'Show Filters' : 'Hide Filters'}</span>
+                  {activeFilterCount > 0 && (
+                    <span className="w-4 h-4 rounded-full bg-brand-600 text-white text-[10px] flex items-center justify-center font-bold">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
 
-            {/* Quick Sort Dropdown */}
-            <div className="flex items-center gap-2 text-xs text-slate-600">
-              <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
-              <span className="hidden sm:inline font-medium">Sort by:</span>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
-              >
-                <option value="featured">Featured & Best Sellers</option>
-                <option value="price-asc">Price: Low to High</option>
-                <option value="price-desc">Price: High to Low</option>
-                <option value="discount">Highest Discount %</option>
-              </select>
-            </div>
+                {/* Mobile Filter Toggle */}
+                <button
+                  onClick={() => setMobileFilterOpen(!mobileFilterOpen)}
+                  className="lg:hidden flex items-center gap-2 px-3.5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-semibold"
+                >
+                  <Filter className="w-3.5 h-3.5 text-brand-600" />
+                  <span>Filters {activeFilterCount > 0 && `(${activeFilterCount})`}</span>
+                </button>
+
+                {/* Quick Sort Dropdown */}
+                <div className="flex items-center gap-2 text-xs text-slate-600">
+                  <ArrowUpDown className="w-3.5 h-3.5 text-slate-400" />
+                  <span className="hidden sm:inline font-medium">Sort by:</span>
+                  <select
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value)}
+                    className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
+                  >
+                    <option value="featured">Featured & Best Sellers</option>
+                    <option value="price-asc">Price: Low to High</option>
+                    <option value="price-desc">Price: High to Low</option>
+                    <option value="discount">Highest Discount %</option>
+                  </select>
+                </div>
+              </>
+            )}
+
+            {catalogTab === 'accessories' && (
+              <span className="text-xs text-slate-500 font-medium">
+                Showing {filteredAccessories.length} items
+              </span>
+            )}
 
           </div>
 
         </div>
 
-        {/* Main Content Layout: Sidebar + Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-          
-          {/* Desktop Filter Sidebar (Isolated Operation Section) */}
-          <div className="hidden lg:block lg:col-span-1 sticky top-20 filter-scroll-container rounded-2xl group/sidebar">
-            <FilterSidebar
-              filters={filters}
-              setFilters={setFilters}
-              resetFilters={resetFilters}
-              activeFilterCount={activeFilterCount}
-              availableBrands={availableBrands}
-              totalResults={filteredLaptops.length}
-              facetCounts={facetCounts}
-              priceStats={priceStats}
-            />
+        {/* Quick Filter Pills (for Laptops) */}
+        {catalogTab === 'laptops' && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 scrollbar-none text-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
+              Quick Filter:
+            </span>
+            {[
+              { id: 'all', label: 'All Laptops' },
+              { id: 'under-25k', label: '⚡ Under ₹25,000' },
+              { id: '16gb-ram', label: '🔥 16GB RAM' },
+              { id: 'dell', label: '💼 Dell Latitude' },
+              { id: 'thinkpad', label: '🏢 Lenovo ThinkPad' },
+              { id: 'apple', label: '🍏 Apple MacBook' },
+              { id: 'i7', label: '🚀 Intel Core i7' },
+              { id: 'grade-a', label: '⭐ Grade A+ Like New' },
+            ].map(pill => (
+              <button
+                key={pill.id}
+                onClick={() => applyQuickPill(pill.id)}
+                className={`px-3 py-1.5 rounded-full shrink-0 font-semibold transition-all ${
+                  activeQuickPill === pill.id
+                    ? 'bg-slate-900 text-white shadow-xs'
+                    : 'bg-white hover:bg-slate-100 text-slate-600 border border-slate-200/80'
+                }`}
+              >
+                {pill.label}
+              </button>
+            ))}
           </div>
+        )}
+
+        {/* Quick Category Pills (for Accessories) */}
+        {catalogTab === 'accessories' && (
+          <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-6 scrollbar-none text-xs">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 mr-1 hidden sm:inline">
+              Category:
+            </span>
+            {accessoryCategories.map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedAccessoryCategory(cat)}
+                className={`px-3.5 py-1.5 rounded-full shrink-0 font-semibold transition-all ${
+                  selectedAccessoryCategory === cat
+                    ? 'bg-brand-600 text-white shadow-xs'
+                    : 'bg-white hover:bg-slate-100 text-slate-700 border border-slate-200'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Main Content Layout: Sidebar + Grid for Laptops OR Full Grid for Accessories */}
+        {catalogTab === 'laptops' ? (
+          <div className={desktopFilterCollapsed ? 'grid grid-cols-1 gap-8' : 'grid grid-cols-1 lg:grid-cols-4 gap-8 items-start'}>
+            
+            {/* Desktop Filter Sidebar */}
+            {!desktopFilterCollapsed && (
+              <div className="hidden lg:block lg:col-span-1 sticky top-20 filter-scroll-container rounded-2xl group/sidebar">
+                <FilterSidebar
+                  filters={filters}
+                  setFilters={setFilters}
+                  resetFilters={resetFilters}
+                  activeFilterCount={activeFilterCount}
+                  availableBrands={availableBrands}
+                  totalResults={filteredLaptops.length}
+                  facetCounts={facetCounts}
+                  priceStats={priceStats}
+                />
+              </div>
+            )}
 
           {/* Mobile Filter Drawer */}
           {mobileFilterOpen && (
@@ -511,7 +677,7 @@ export default function LaptopCatalog({
           )}
 
           {/* Laptop Cards Grid / Empty State */}
-          <div className="lg:col-span-3 space-y-6">
+          <div className={desktopFilterCollapsed ? 'w-full space-y-6' : 'lg:col-span-3 space-y-6'}>
             
             {/* Active Filter Badges */}
             {activeFilterCount > 0 && (
@@ -585,7 +751,11 @@ export default function LaptopCatalog({
 
             {/* Grid Container */}
             {filteredLaptops.length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+              <div className={
+                desktopFilterCollapsed
+                  ? "grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6"
+                  : "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
+              }>
                 {filteredLaptops.map(laptop => (
                   <LaptopCard
                     key={laptop.id}
@@ -663,6 +833,47 @@ export default function LaptopCatalog({
           </div>
 
         </div>
+        ) : (
+          /* ======================================================== */
+          /* ACCESSORIES & HARDWARE UPGRADES SECTION                  */
+          /* ======================================================== */
+          <div className="space-y-6 animate-fadeIn">
+            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex items-center justify-between">
+              <div className="flex items-center gap-2 text-slate-800 font-bold text-sm">
+                <Package className="w-4 h-4 text-brand-600" />
+                <span>Genuine Accessories & Upgrade Kits</span>
+              </div>
+              <span className="text-xs text-slate-500">
+                Backed by RS 6-Month to 3-Year Warranty
+              </span>
+            </div>
+
+            {filteredAccessories.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-6">
+                {filteredAccessories.map(accessory => (
+                  <AccessoryCard
+                    key={accessory.id}
+                    accessory={accessory}
+                    onAddToCart={onAddToCart}
+                    isInCart={cart.some(c => c.id === accessory.id)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="bg-white rounded-3xl p-12 text-center border border-slate-200 max-w-md mx-auto">
+                <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+                <h3 className="font-bold text-slate-800 text-base mb-1">No Accessories Found</h3>
+                <p className="text-xs text-slate-500 mb-4">No accessories match "{searchQuery}". Try selecting another category.</p>
+                <button
+                  onClick={() => { setSelectedAccessoryCategory('All'); setSearchQuery(''); }}
+                  className="px-4 py-2 bg-brand-600 text-white rounded-xl text-xs font-bold"
+                >
+                  Show All Accessories
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
       </div>
 
@@ -706,8 +917,11 @@ export default function LaptopCatalog({
         <LaptopCompareModal
           compareList={compareList}
           onClose={() => setShowCompareModal(false)}
+          onRemoveFromCompare={removeFromCompare}
           onRemove={removeFromCompare}
+          onClearCompare={() => setCompareList([])}
           onAddToCart={onAddToCart}
+          cart={cart}
         />
       )}
 
