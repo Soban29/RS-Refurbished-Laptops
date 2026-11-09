@@ -25,10 +25,14 @@ if "%GITHUB_PAT%"=="" (
 )
 
 echo.
-echo [1/2] Authenticating with GitHub...
+echo [1/3] Staging and committing changes...
+"C:\Users\DELL\mingit\cmd\git.exe" add .
+"C:\Users\DELL\mingit\cmd\git.exe" commit -m "Update RS Refurbished Laptops website" --allow-empty
+
+echo [2/3] Authenticating with GitHub...
 "C:\Users\DELL\mingit\cmd\git.exe" remote set-url origin https://%GITHUB_PAT%@github.com/Soban29/RS-Refurbished-Laptops.git
 
-echo [2/2] Pushing main branch to GitHub...
+echo [3/3] Pushing main branch to GitHub...
 "C:\Users\DELL\mingit\cmd\git.exe" push -u origin main
 
 if %ERRORLEVEL% EQU 0 (
