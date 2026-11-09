@@ -68,11 +68,15 @@ if (fs.existsSync(envPath)) {
 // -------------------------------------------------------------
 // ENFORCE CRITICAL ENVIRONMENT SECRETS (NO HARDCODED FALLBACKS)
 // The server must refuse to start if essential secrets are missing.
+// Supports either plaintext ADMIN_PASSCODE or pre-hashed ADMIN_PASSCODE_HASH
 // -------------------------------------------------------------
-if (!process.env.ADMIN_PASSCODE || !process.env.ADMIN_PASSCODE.trim()) {
-  console.error('\n❌ [FATAL CONFIGURATION ERROR] Missing ADMIN_PASSCODE in environment variables.');
+const rawPasscode = (process.env.ADMIN_PASSCODE || '').trim();
+const passcodeHashEnv = (process.env.ADMIN_PASSCODE_HASH || '').trim().toLowerCase();
+
+if (!rawPasscode && !passcodeHashEnv) {
+  console.error('\n❌ [FATAL CONFIGURATION ERROR] Missing ADMIN_PASSCODE or ADMIN_PASSCODE_HASH in environment variables.');
   console.error('The server refuses to start with an insecure default password.');
-  console.error('Please define ADMIN_PASSCODE in your .env file before starting the application.\n');
+  console.error('Please define ADMIN_PASSCODE or ADMIN_PASSCODE_HASH in your .env file before starting the application.\n');
   process.exit(1);
 }
 
@@ -83,7 +87,11 @@ if (!process.env.ADMIN_JWT_SECRET || !process.env.ADMIN_JWT_SECRET.trim()) {
   process.exit(1);
 }
 
-const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE.trim();
+// Compute expected SHA-256 binary hash buffer for timing-safe comparison
+const ADMIN_PASSCODE_BUFFER = passcodeHashEnv
+  ? Buffer.from(passcodeHashEnv, 'hex')
+  : crypto.createHash('sha256').update(rawPasscode).digest();
+
 const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET.trim();
 const PORT = process.env.PORT || 5000;
 
@@ -363,9 +371,7 @@ app.post('/api/admin/login', (req, res) => {
 
   // Constant-time comparison using crypto SHA-256 hashes
   const inputHash = crypto.createHash('sha256').update(String(passcode).trim()).digest();
-  const adminHash = crypto.createHash('sha256').update(ADMIN_PASSCODE).digest();
-
-  const isMatch = crypto.timingSafeEqual(inputHash, adminHash);
+  const isMatch = (inputHash.length === ADMIN_PASSCODE_BUFFER.length) && crypto.timingSafeEqual(inputHash, ADMIN_PASSCODE_BUFFER);
 
   if (isMatch) {
     adminFailedAttempts.delete(clientIp);
