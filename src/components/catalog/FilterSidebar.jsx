@@ -45,7 +45,7 @@ export default function FilterSidebar({
   const ramOptions = [8, 16, 32];
   const storageOptions = [256, 512, 1024];
   const screenOptions = [13.3, 14, 15.6];
-  const gradeOptions = ["Grade A+ (Like New)", "Grade A+ (Pristine)", "Grade A (Excellent)"];
+  const gradeOptions = ["Grade A++ (Like New)", "Grade A+ (Like New)"];
 
   // Helper to safely get counts
   const getRamCount = (r) => facetCounts.rams?.[r] ?? 0;

@@ -47,7 +47,9 @@ import {
   fetchSqlTableRows, 
   runSqlQueryApi, 
   getDownloadDatabaseUrl, 
-  getDownloadSqlDumpUrl 
+  getDownloadSqlDumpUrl,
+  adminLoginApi,
+  clearAdminToken
 } from '../../services/api';
 
 export default function AdminModal({
@@ -187,18 +189,25 @@ export default function AdminModal({
   };
 
   // Handle Login
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    if (password === 'admin123' || password === 'admin' || password === 'rs123') {
+    setAuthError('');
+    if (!password.trim()) {
+      setAuthError('Please enter the owner passcode.');
+      return;
+    }
+    const res = await adminLoginApi(password.trim());
+    if (res.success) {
       setIsAdminLoggedIn(true);
       setAuthError('');
       setPassword('');
     } else {
-      setAuthError('Invalid Admin Passcode! Use "admin123" for access.');
+      setAuthError(res.error || 'Invalid Admin Passcode! Access Denied.');
     }
   };
 
   const handleLogout = () => {
+    clearAdminToken();
     setIsAdminLoggedIn(false);
     setActiveTab('inventory');
   };
@@ -363,17 +372,6 @@ export default function AdminModal({
                 >
                   Unlock Admin Dashboard
                 </button>
-
-                <div className="pt-2 text-xs text-slate-500 bg-white p-3 rounded-xl border border-slate-200 flex items-center justify-between">
-                  <span>Demo Passcode: <strong className="font-mono text-slate-900">admin123</strong></span>
-                  <button
-                    type="button"
-                    onClick={() => { setPassword('admin123'); }}
-                    className="text-brand-600 font-bold hover:underline"
-                  >
-                    Auto-Fill
-                  </button>
-                </div>
               </form>
             </div>
           ) : (

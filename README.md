@@ -51,12 +51,35 @@ npm.cmd run dev
    - Chip-level motherboard repair, screen replacement, 10x RAM/SSD speed boost, thermal servicing.
    - Online repair ticket booking with doorstep pickup or store visit.
 
-5. **Protected Admin Management Portal**:
-   - **Passcode**: `admin123` (or click "Auto-Fill" on modal).
-   - **Inventory Manager**: Add new laptops, edit pricing/stock counts, toggle stock status, and delete items.
+5. **Private Owner & Admin Management Portal**:
+   - Secret access via keyboard shortcut (<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>A</kbd>), `#admin` URL hash, or secret easter egg.
+   - **Authentication**: Secured with cryptographic HMAC session tokens and server-side rate-limited login. Configure `ADMIN_PASSCODE` in `.env`.
+   - **Inventory Manager**: Add new laptops, edit specs, toggle stock status ("In Stock" / "Out of Stock"), and manage models.
    - **Quote Leads Manager**: Manage incoming customer and corporate quote requests with status tracking (`Pending`, `Contacted`, `Completed`) and direct WhatsApp triggers.
    - **Service Tickets Manager**: Track repair tickets and update diagnostics status.
-   - **Data Backup & Reset**: Export inventory as JSON or reset to factory demo data with 1-click.
+   - **Data Backup & Reset**: Authenticated export of inventory as JSON/Excel or reset to factory data.
+
+---
+
+## 🔒 Security Hardening & Secret Management
+
+This project implements strict defense-in-depth protections based on OWASP and standard production audit checklists:
+
+1. **Secret & Key Isolation**:
+   - Real API keys and credentials must NEVER be committed to Git.
+   - All server credentials (`GEMINI_API_KEY`, `ADMIN_PASSCODE`, `ADMIN_JWT_SECRET`) are stored strictly in `.env`.
+   - `.env` is ignored by `.gitignore`. A sanitized template is provided in `.env.example`.
+   - ⚠️ **Git History Warning**: If any API key, PAT token, or passcode was previously committed to version control, rotate it immediately in the provider dashboard (Google AI Studio, GitHub, etc.).
+
+2. **Access Control & Authorization**:
+   - All sensitive administrative endpoints (`/api/users`, `/api/orders`, `/api/services`, `/api/inquiries`, `/api/sql/*`, `/api/data/download`) require valid HMAC-SHA256 signed admin session tokens.
+   - Unauthenticated requests cannot view customer lists, phone numbers, or addresses.
+
+3. **Protection Against Exploits & Abuse**:
+   - **Security Headers**: HSTS, X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy, and Content-Security-Policy (CSP).
+   - **Rate Limiting**: Granular rate limiters protect against DDoS, brute-force admin logins, form spam, and AI API quota exhaustion.
+   - **Input Sanitization**: Recursive stripping of script injection vectors, iframes, and onload triggers.
+   - **Internal File Shield**: Server blocks direct HTTP access to `.env`, `.git`, `.bat`, and database files.
 
 6. **Quote Tray & 1-Click WhatsApp Order**:
    - Build custom quotation trays with optional RAM/SSD upgrades and send pre-formatted order directly to WhatsApp (`+91 8668848486`).

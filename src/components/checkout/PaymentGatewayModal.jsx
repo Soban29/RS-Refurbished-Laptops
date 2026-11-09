@@ -155,6 +155,10 @@ export default function PaymentGatewayModal({
         confetti({ particleCount: 100, spread: 80, origin: { y: 0.5 } });
       } catch (err) {}
 
+      // Zero-out sensitive payment card data from memory immediately
+      setCardInfo({ number: '', name: '', expiry: '', cvv: '' });
+      setUpiId('');
+
       if (onOrderSuccess) {
         onOrderSuccess(newOrder);
       }

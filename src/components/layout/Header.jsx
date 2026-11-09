@@ -31,6 +31,25 @@ export default function Header({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
+  // Secret Easter Egg for Owner Admin Portal: Click "Certified" badge 3 times
+  const clickCountRef = useRef(0);
+  const clickTimerRef = useRef(null);
+
+  const handleSecretCertifiedClick = (e) => {
+    e.stopPropagation();
+    clickCountRef.current += 1;
+    if (clickTimerRef.current) clearTimeout(clickTimerRef.current);
+
+    if (clickCountRef.current >= 3) {
+      clickCountRef.current = 0;
+      onOpenAdmin();
+    } else {
+      clickTimerRef.current = setTimeout(() => {
+        clickCountRef.current = 0;
+      }, 1200);
+    }
+  };
+
   useEffect(() => {
     const handleScroll = () => {
       setIsScrolled(window.scrollY > 20);
@@ -101,7 +120,11 @@ export default function Header({
                 <span className="font-extrabold text-lg sm:text-xl tracking-tight text-slate-900 group-hover:text-brand-600 transition-colors whitespace-nowrap">
                   RS <span className="text-brand-600">Refurbished</span>
                 </span>
-                <span className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap">
+                <span 
+                  onClick={handleSecretCertifiedClick}
+                  className="hidden sm:inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 whitespace-nowrap cursor-pointer select-none"
+                  title="RS Certified"
+                >
                   <CheckCircle2 className="w-2.5 h-2.5 mr-0.5" /> Certified
                 </span>
               </div>
@@ -181,7 +204,7 @@ export default function Header({
                 <button
                   onClick={onOpenAuth}
                   className="flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 group"
-                  title="Sign In / Register / Owner Portal"
+                  title="Sign In / Register"
                   aria-label="Account Login"
                 >
                   <User className="w-5 h-5 text-slate-300 group-hover:text-white transition-colors" />
@@ -372,7 +395,7 @@ export default function Header({
               >
                 <User className="w-4 h-4 text-slate-600" />
                 <span>
-                  {currentUser ? `Sign Out (${currentUser.name})` : 'Customer Sign In / Owner Portal'}
+                  {currentUser ? `Sign Out (${currentUser.name})` : 'Customer Sign In / Register'}
                 </span>
               </button>
             </div>

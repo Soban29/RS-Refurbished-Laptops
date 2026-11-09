@@ -44,90 +44,189 @@ const DATA_DIR = path.join(__dirname, 'data');
 const JSON_DB_FILE = path.join(DATA_DIR, 'rs_refurbished_database.json');
 const EXCEL_DB_FILE = path.join(DATA_DIR, 'rs_refurbished_database.xlsx');
 
-const app = express();
+// -------------------------------------------------------------
+// ENVIRONMENT VARIABLE LOADER & INTEGRITY VALIDATOR
+// -------------------------------------------------------------
+const envPath = path.join(__dirname, '.env');
+if (fs.existsSync(envPath)) {
+  try {
+    const envFileContent = fs.readFileSync(envPath, 'utf-8');
+    envFileContent.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [k, ...v] = trimmed.split('=');
+        if (k && v.length) {
+          process.env[k.trim()] = v.join('=').trim().replace(/^["']|["']$/g, '');
+        }
+      }
+    });
+  } catch (e) {
+    console.error('Notice: Could not read .env file:', e.message);
+  }
+}
+
+// -------------------------------------------------------------
+// ENFORCE CRITICAL ENVIRONMENT SECRETS (NO HARDCODED FALLBACKS)
+// The server must refuse to start if essential secrets are missing.
+// -------------------------------------------------------------
+if (!process.env.ADMIN_PASSCODE || !process.env.ADMIN_PASSCODE.trim()) {
+  console.error('\n❌ [FATAL CONFIGURATION ERROR] Missing ADMIN_PASSCODE in environment variables.');
+  console.error('The server refuses to start with an insecure default password.');
+  console.error('Please define ADMIN_PASSCODE in your .env file before starting the application.\n');
+  process.exit(1);
+}
+
+if (!process.env.ADMIN_JWT_SECRET || !process.env.ADMIN_JWT_SECRET.trim()) {
+  console.error('\n❌ [FATAL CONFIGURATION ERROR] Missing ADMIN_JWT_SECRET in environment variables.');
+  console.error('The server refuses to start without a cryptographic session signing secret.');
+  console.error('Please define ADMIN_JWT_SECRET in your .env file before starting the application.\n');
+  process.exit(1);
+}
+
+const ADMIN_PASSCODE = process.env.ADMIN_PASSCODE.trim();
+const ADMIN_JWT_SECRET = process.env.ADMIN_JWT_SECRET.trim();
 const PORT = process.env.PORT || 5000;
 
-// -------------------------------------------------------------
-// CYBERSECURITY DEFENSE LAYER (Anti-Cybercrime & Attack Shield)
-// -------------------------------------------------------------
+const app = express();
 
-// 1. Security Headers (Defense-in-Depth against XSS, Clickjacking, Sniffing)
+// Trust reverse proxy (Render, Vercel, Nginx, Cloudflare) so Express populates req.ip safely
+app.set('trust proxy', 1);
+
+// -------------------------------------------------------------
+// SECURE CLIENT IP RESOLVER (PREVENTS X-FORWARDED-FOR HEADER SPOOFING)
+// -------------------------------------------------------------
+function getClientIp(req) {
+  // Use Express-validated req.ip under trust proxy settings
+  if (req.ip) return req.ip;
+  // Fallback to direct TCP socket connection address (cannot be header-spoofed)
+  if (req.socket && req.socket.remoteAddress) return req.socket.remoteAddress;
+  return '127.0.0.1';
+}
+
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 1: SENSITIVE FILE & DOTFILE BLOCKER
+// Safely handles malformed percent-encoding in request paths.
+// -------------------------------------------------------------
 app.use((req, res, next) => {
-  // Prevent MIME-type sniffing exploits
+  let decoded = '';
+  try {
+    decoded = decodeURIComponent(req.path).toLowerCase();
+  } catch (err) {
+    // Malformed percent-encoding like /%99 or /%c0%af - reject with 400 Bad Request
+    return res.status(400).json({
+      success: false,
+      error: 'Bad Request: Malformed URI percent-encoding detected.'
+    });
+  }
+
+  // Prevent path traversal and direct access to env, git, bat, or data stores
+  if (
+    decoded.includes('.env') ||
+    decoded.includes('.git') ||
+    decoded.includes('.bat') ||
+    decoded.includes('/data/') ||
+    (decoded.endsWith('.json') && !decoded.startsWith('/api/')) ||
+    (decoded.endsWith('.xlsx') && !decoded.startsWith('/api/')) ||
+    decoded.includes('..')
+  ) {
+    return res.status(403).json({
+      success: false,
+      error: 'Access denied: Protected file or system path.'
+    });
+  }
+  next();
+});
+
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 2: SECURITY HEADERS (OWASP RECOMMENDED)
+// -------------------------------------------------------------
+app.use((req, res, next) => {
+  // Prevent MIME-type sniffing
   res.setHeader('X-Content-Type-Options', 'nosniff');
-  // Prevent Clickjacking attacks (blocking unauthorized iframe embeds)
-  res.setHeader('X-Frame-Options', 'SAMEORIGIN');
-  // Legacy XSS filter protection
-  res.setHeader('X-XSS-Protection', '1; mode=block');
-  // Referrer Policy to prevent data leakage in URL headers
+  // Prevent Clickjacking attacks (Disallow frame embeds)
+  res.setHeader('X-Frame-Options', 'DENY');
+  // Enforce HTTPS in production via HSTS (1 year)
+  res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
+  // Restrict referrer leakage
   res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-  // Hardware permissions policy lockdown
+  // Hardware permission policy lockdown
   res.setHeader('Permissions-Policy', 'camera=(), microphone=(), geolocation=(), payment=()');
-  // Content Security Policy (enforcing strict resource boundaries)
+  // Content Security Policy
   res.setHeader(
     'Content-Security-Policy',
-    "default-src 'self' 'unsafe-inline' 'unsafe-eval' https: data: blob:;"
+    "default-src 'self' https: data: blob: 'unsafe-inline'; script-src 'self' 'unsafe-inline' https:; img-src 'self' data: https: blob:; style-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; connect-src 'self' https:;"
   );
-  // Hide server fingerprint from automated scanners
+  // Strip server signature
   res.removeHeader('X-Powered-By');
   next();
 });
 
-// 2. Strict Rate Limiting (DDoS & API Abuse Defense)
-const requestRateMap = new Map();
-const RATE_WINDOW_MS = 60 * 1000; // 1 minute sliding window
-const MAX_REQUESTS_PER_MINUTE = 180; // max 180 req/min per IP
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 3: GRANULAR RATE LIMITERS
+// Keyed using secure getClientIp (immune to raw header spoofing).
+// -------------------------------------------------------------
+const createRateLimiter = (windowMs, maxReqs, errorMsg) => {
+  const rateMap = new Map();
+  return (req, res, next) => {
+    const clientIp = getClientIp(req);
+    const now = Date.now();
+    const stats = rateMap.get(clientIp) || { count: 0, resetTime: now + windowMs };
 
-const rateLimiter = (req, res, next) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
-  const now = Date.now();
-  const clientStats = requestRateMap.get(clientIp) || { count: 0, resetTime: now + RATE_WINDOW_MS };
-
-  if (now > clientStats.resetTime) {
-    clientStats.count = 1;
-    clientStats.resetTime = now + RATE_WINDOW_MS;
-  } else {
-    clientStats.count++;
-  }
-
-  requestRateMap.set(clientIp, clientStats);
-
-  // Periodically clean stale IP maps (memory leak prevention)
-  if (requestRateMap.size > 10000) {
-    for (const [ip, data] of requestRateMap.entries()) {
-      if (now > data.resetTime) requestRateMap.delete(ip);
+    if (now > stats.resetTime) {
+      stats.count = 1;
+      stats.resetTime = now + windowMs;
+    } else {
+      stats.count++;
     }
-  }
 
-  if (clientStats.count > MAX_REQUESTS_PER_MINUTE) {
-    return res.status(429).json({
-      success: false,
-      error: 'Too many requests. Cyber protection rate limit triggered. Please wait a moment.'
-    });
-  }
+    rateMap.set(clientIp, stats);
 
-  next();
+    // Memory cleanup
+    if (rateMap.size > 5000) {
+      for (const [ip, data] of rateMap.entries()) {
+        if (now > data.resetTime) rateMap.delete(ip);
+      }
+    }
+
+    if (stats.count > maxReqs) {
+      return res.status(429).json({
+        success: false,
+        error: errorMsg || 'Too many requests. Rate limit triggered. Please wait a moment.'
+      });
+    }
+    next();
+  };
 };
 
-app.use(rateLimiter);
+const generalRateLimiter = createRateLimiter(60 * 1000, 180, 'General API rate limit reached. Please wait.');
+const aiChatLimiter = createRateLimiter(60 * 1000, 25, 'AI query rate limit reached (max 25 requests/min). Please wait a moment.');
+const submissionLimiter = createRateLimiter(60 * 1000, 10, 'Too many form submissions. Please wait a moment before trying again.');
 
-// 3. Payload size limiting (JSON Bomb & Memory Exhaustion DoS prevention)
+app.use(generalRateLimiter);
+
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 4: CORS & PAYLOAD LIMITS
+// -------------------------------------------------------------
 app.use(cors({
-  origin: '*',
+  origin: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
-app.use(express.json({ limit: '400kb' }));
 
-// 4. Recursive Input Sanitizer (XSS & Script Injection Shield)
+// Limit JSON payload to 200kb to block memory exhaustion / JSON-bomb attacks
+app.use(express.json({ limit: '200kb' }));
+
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 5: RECURSIVE INPUT SANITIZER
+// -------------------------------------------------------------
 const sanitizeValue = (val) => {
   if (typeof val === 'string') {
-    // Strip dangerous HTML script tags and javascript: URIs
     return val
       .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
       .replace(/<iframe\b[^<]*(?:(?!<\/iframe>)<[^<]*)*<\/iframe>/gi, '')
       .replace(/javascript:[^"']*/gi, '')
       .replace(/on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/data:text\/html[^"']*/gi, '')
       .trim();
   } else if (Array.isArray(val)) {
     return val.map(sanitizeValue);
@@ -148,364 +247,104 @@ app.use((req, res, next) => {
   next();
 });
 
-// Health & Info Endpoint
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 6: SAFE CENTRALIZED ERROR HANDLER
+// -------------------------------------------------------------
+function sendSafeError(res, statusCode, publicMsg, rawErr = null) {
+  const correlationId = crypto.randomBytes(4).toString('hex');
+  if (rawErr) {
+    console.error(`[Error Ref: ${correlationId}]`, rawErr?.message || rawErr);
+  }
+  return res.status(statusCode).json({
+    success: false,
+    error: publicMsg,
+    correlationId
+  });
+}
+
+// -------------------------------------------------------------
+// PRODUCTION DEFENSE LAYER 7: CRYPTOGRAPHIC ADMIN AUTH & SESSIONS
+// -------------------------------------------------------------
+function generateAdminToken() {
+  const payload = {
+    role: 'admin',
+    iss: 'rs_refurbished_server',
+    iat: Date.now(),
+    exp: Date.now() + 12 * 60 * 60 * 1000, // 12-hour session
+    nonce: crypto.randomBytes(12).toString('hex')
+  };
+  const payloadStr = Buffer.from(JSON.stringify(payload)).toString('base64url');
+  const signature = crypto
+    .createHmac('sha256', ADMIN_JWT_SECRET)
+    .update(payloadStr)
+    .digest('base64url');
+  return `${payloadStr}.${signature}`;
+}
+
+function verifyAdminToken(token) {
+  if (!token || typeof token !== 'string') return false;
+  const parts = token.trim().split('.');
+  if (parts.length !== 2) return false;
+  const [payloadStr, signature] = parts;
+
+  try {
+    const expectedSig = crypto
+      .createHmac('sha256', ADMIN_JWT_SECRET)
+      .update(payloadStr)
+      .digest('base64url');
+
+    const sigA = Buffer.from(signature);
+    const sigB = Buffer.from(expectedSig);
+    if (sigA.length !== sigB.length || !crypto.timingSafeEqual(sigA, sigB)) {
+      return false;
+    }
+
+    const payload = JSON.parse(Buffer.from(payloadStr, 'base64url').toString('utf-8'));
+    if (!payload || payload.role !== 'admin') return false;
+    if (typeof payload.exp !== 'number' || Date.now() > payload.exp) return false;
+
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+function requireAdminAuth(req, res, next) {
+  const authHeader = req.headers.authorization || '';
+  const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (req.query.token || '');
+
+  if (!verifyAdminToken(token)) {
+    return res.status(401).json({
+      success: false,
+      error: 'Unauthorized access. Valid admin session token required.'
+    });
+  }
+  next();
+}
+
+// -------------------------------------------------------------
+// PUBLIC HEALTH CHECK (Sanitized - Zero Leakage)
+// -------------------------------------------------------------
 app.get('/api/health', (req, res) => {
-  const stats = getDatabaseStats();
   res.json({
     status: 'online',
     appName: 'RS Refurbished Laptops & Services API',
-    databaseEngine: 'JSON Document Store (data/rs_refurbished_database.json)',
+    version: '1.0.0',
     contact: '+91 8668848486',
-    databaseStats: stats,
     timestamp: new Date().toISOString()
   });
 });
 
-// --- User Management Endpoints (Users Collection) ---
-app.get('/api/users', (req, res) => {
-  try {
-    const { email } = req.query;
-    if (email) {
-      const user = getUserByEmail(email);
-      if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-      return res.json({ success: true, data: user });
-    }
-    const users = getUsers();
-    res.json({ success: true, count: users.length, data: users });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/users', (req, res) => {
-  try {
-    if (!req.body || !req.body.email) {
-      return res.status(400).json({ success: false, error: 'Email is required' });
-    }
-    const user = addUser(req.body);
-    res.status(201).json({ success: true, data: user });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/users/:id', (req, res) => {
-  try {
-    const user = getUserById(req.params.id);
-    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
-    res.json({ success: true, data: user });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.put('/api/users/:id', (req, res) => {
-  try {
-    const updated = updateUser(req.params.id, req.body);
-    if (!updated) return res.status(404).json({ success: false, error: 'User not found' });
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.delete('/api/users/:id', (req, res) => {
-  try {
-    const deleted = deleteUser(req.params.id);
-    if (!deleted) return res.status(404).json({ success: false, error: 'User not found' });
-    res.json({ success: true, message: 'User deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Laptops Endpoints (Laptops Collection) ---
-app.get('/api/laptops', (req, res) => {
-  try {
-    const laptops = getLaptops();
-    res.json({ success: true, count: laptops.length, data: laptops });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/laptops', (req, res) => {
-  try {
-    const newLaptop = addLaptop(req.body);
-    res.status(201).json({ success: true, data: newLaptop });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.put('/api/laptops/:id', (req, res) => {
-  try {
-    const updated = updateLaptop(req.params.id, req.body);
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Laptop not found' });
-    }
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.delete('/api/laptops/:id', (req, res) => {
-  try {
-    const deleted = deleteLaptop(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Laptop not found' });
-    }
-    res.json({ success: true, message: 'Laptop deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Inquiries Endpoints (Inquiries Collection) ---
-app.get('/api/inquiries', (req, res) => {
-  try {
-    const inquiries = getInquiries();
-    res.json({ success: true, count: inquiries.length, data: inquiries });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/inquiries', (req, res) => {
-  try {
-    const newInquiry = addInquiry(req.body);
-    res.status(201).json({ success: true, data: newInquiry });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.put('/api/inquiries/:id', (req, res) => {
-  try {
-    const updated = updateInquiryStatus(req.params.id, req.body.status);
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Inquiry not found' });
-    }
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.delete('/api/inquiries/:id', (req, res) => {
-  try {
-    const deleted = deleteInquiry(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Inquiry not found' });
-    }
-    res.json({ success: true, message: 'Inquiry deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Service Tickets Endpoints (Service Tickets Collection) ---
-app.get('/api/services', (req, res) => {
-  try {
-    const tickets = getServiceTickets();
-    res.json({ success: true, count: tickets.length, data: tickets });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/services', (req, res) => {
-  try {
-    const newTicket = addServiceTicket(req.body);
-    res.status(201).json({ success: true, data: newTicket });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.put('/api/services/:id', (req, res) => {
-  try {
-    const updated = updateServiceTicketStatus(req.params.id, req.body.status);
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Ticket not found' });
-    }
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.delete('/api/services/:id', (req, res) => {
-  try {
-    const deleted = deleteServiceTicket(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Ticket not found' });
-    }
-    res.json({ success: true, message: 'Ticket deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Orders & Sales Endpoints (Orders Collection) ---
-app.get('/api/orders', (req, res) => {
-  try {
-    const orders = getOrders();
-    res.json({ success: true, count: orders.length, data: orders });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/orders', (req, res) => {
-  try {
-    const newOrder = addOrder(req.body);
-    res.status(201).json({ success: true, data: newOrder });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.put('/api/orders/:id', (req, res) => {
-  try {
-    const updated = updateOrderStatus(req.params.id, req.body.status);
-    if (!updated) {
-      return res.status(404).json({ success: false, error: 'Order not found' });
-    }
-    res.json({ success: true, data: updated });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.delete('/api/orders/:id', (req, res) => {
-  try {
-    const deleted = deleteOrder(req.params.id);
-    if (!deleted) {
-      return res.status(404).json({ success: false, error: 'Order not found' });
-    }
-    res.json({ success: true, message: 'Order deleted successfully' });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Database Inspection Endpoints ---
-app.get('/api/sql/info', (req, res) => {
-  try {
-    const stats = getDatabaseStats();
-    res.json({ success: true, data: stats });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/sql/tables', (req, res) => {
-  try {
-    const tables = getTableList();
-    const stats = getDatabaseStats();
-    res.json({ success: true, count: tables.length, data: tables, stats });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/sql/table/:table', (req, res) => {
-  try {
-    const limit = Math.min(Number(req.query.limit) || 100, 500);
-    const offset = Number(req.query.offset) || 0;
-    const result = getTableRows(req.params.table, limit, offset);
-    res.json({ success: true, data: result });
-  } catch (err) {
-    res.status(400).json({ success: false, error: err.message });
-  }
-});
-
-app.post('/api/sql/query', (req, res) => {
-  try {
-    const { query } = req.body;
-    if (!query || typeof query !== 'string') {
-      return res.status(400).json({ success: false, error: 'SQL query string is required' });
-    }
-    const result = executeCustomSqlQuery(query);
-    if (!result.success) {
-      return res.status(400).json(result);
-    }
-    res.json(result);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/data/download', (req, res) => {
-  try {
-    if (fs.existsSync(JSON_DB_FILE)) {
-      res.download(JSON_DB_FILE, 'rs_refurbished_database.json');
-    } else {
-      res.status(404).json({ success: false, error: 'Database file not found' });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Download side-by-side Excel database file (.xlsx)
-app.get('/api/data/download-excel', async (req, res) => {
-  try {
-    const db = loadDatabase();
-    await syncDatabaseToExcel(db);
-    if (fs.existsSync(EXCEL_DB_FILE)) {
-      res.download(EXCEL_DB_FILE, 'rs_refurbished_database.xlsx');
-    } else {
-      res.status(404).json({ success: false, error: 'Excel database file not found' });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Accessories API
-app.get('/api/accessories', (req, res) => {
-  try {
-    const acc = getAccessories();
-    res.json({ success: true, count: acc.length, data: acc });
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// Backward compatibility download route
-app.get('/api/sql/download', (req, res) => {
-  try {
-    if (fs.existsSync(JSON_DB_FILE)) {
-      res.download(JSON_DB_FILE, 'rs_refurbished_database.json');
-    } else {
-      res.status(404).json({ success: false, error: 'Database file not found' });
-    }
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-app.get('/api/sql/dump', (req, res) => {
-  try {
-    const dump = getSqlDump();
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', 'attachment; filename="rs_refurbished_database.json"');
-    res.send(dump);
-  } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
-  }
-});
-
-// --- Admin Controls with Anti-Brute-Force & Timing-Attack Defense ---
+// -------------------------------------------------------------
+// ADMIN AUTHENTICATION (Brute-Force & Timing-Attack Protected)
+// Lockout keyed using secure getClientIp (spoof-resistant).
+// -------------------------------------------------------------
 const adminFailedAttempts = new Map();
 const ADMIN_MAX_FAILS = 5;
-const ADMIN_LOCKOUT_MS = 15 * 60 * 1000; // 15 minutes lockout
+const ADMIN_LOCKOUT_MS = 15 * 60 * 1000; // 15-minute lockout
 
 app.post('/api/admin/login', (req, res) => {
-  const clientIp = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+  const clientIp = getClientIp(req);
   const now = Date.now();
   const attemptInfo = adminFailedAttempts.get(clientIp) || { fails: 0, lockedUntil: 0 };
 
@@ -517,30 +356,28 @@ app.post('/api/admin/login', (req, res) => {
     });
   }
 
-  const { passcode } = req.body;
-  const validPasscodes = ['admin123', 'admin', 'rs123'];
+  const { passcode } = req.body || {};
+  if (!passcode || typeof passcode !== 'string') {
+    return res.status(400).json({ success: false, error: 'Passcode is required' });
+  }
 
-  // Constant-time comparison using crypto SHA-256 hashes to prevent timing attacks
-  const isMatch = validPasscodes.some(validCode => {
-    try {
-      const hashA = crypto.createHash('sha256').update(String(passcode || '')).digest();
-      const hashB = crypto.createHash('sha256').update(validCode).digest();
-      return crypto.timingSafeEqual(hashA, hashB);
-    } catch (e) {
-      return false;
-    }
-  });
+  // Constant-time comparison using crypto SHA-256 hashes
+  const inputHash = crypto.createHash('sha256').update(String(passcode).trim()).digest();
+  const adminHash = crypto.createHash('sha256').update(ADMIN_PASSCODE).digest();
+
+  const isMatch = crypto.timingSafeEqual(inputHash, adminHash);
 
   if (isMatch) {
     adminFailedAttempts.delete(clientIp);
+    const token = generateAdminToken();
     return res.json({
       success: true,
       message: 'Authentication successful',
-      token: 'rs_auth_token_secret'
+      token
     });
   }
 
-  // Increment failure count on incorrect passcode
+  // Increment failure count
   attemptInfo.fails = (attemptInfo.fails || 0) + 1;
   if (attemptInfo.fails >= ADMIN_MAX_FAILS) {
     attemptInfo.lockedUntil = now + ADMIN_LOCKOUT_MS;
@@ -554,25 +391,552 @@ app.post('/api/admin/login', (req, res) => {
   });
 });
 
-app.post('/api/admin/reset', (req, res) => {
+// -------------------------------------------------------------
+// USER MANAGEMENT ENDPOINTS
+// Customer Sign-Up & Google Login persist safely via POST /api/users.
+// Privilege escalation blocked: unauthenticated users strictly get role='customer'.
+// Administrative operations (listing all users, deletion, update) require admin auth.
+// -------------------------------------------------------------
+
+// Protected: Only Admin can list all users
+app.get('/api/users', requireAdminAuth, (req, res) => {
+  try {
+    const { email } = req.query;
+    if (email) {
+      const user = getUserByEmail(email);
+      if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+      return res.json({ success: true, data: user });
+    }
+    const users = getUsers();
+    res.json({ success: true, count: users.length, data: users });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve users.', err);
+  }
+});
+
+// Public customer account creation / Google login persistence (rate-limited)
+app.post('/api/users', submissionLimiter, (req, res) => {
+  try {
+    const { email } = req.body || {};
+    if (!email || typeof email !== 'string') {
+      return res.status(400).json({ success: false, error: 'A valid email is required' });
+    }
+
+    // Verify if caller has admin token
+    const authHeader = req.headers.authorization || '';
+    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : (req.query.token || '');
+    const isAdmin = verifyAdminToken(token);
+
+    const safeUserData = { ...req.body };
+
+    // Prevent privilege escalation: unauthenticated callers are strictly forced to role='customer'
+    if (!isAdmin) {
+      safeUserData.role = 'customer';
+    }
+
+    // Check if user already exists
+    const existing = getUserByEmail(email);
+    if (existing) {
+      if (existing.role === 'admin' && !isAdmin) {
+        return res.status(403).json({ success: false, error: 'Administrative accounts cannot be modified without credentials.' });
+      }
+      const updated = updateUser(existing.id, {
+        ...safeUserData,
+        role: isAdmin ? (safeUserData.role || existing.role) : existing.role,
+        lastLogin: new Date().toISOString()
+      });
+      return res.json({ success: true, data: updated });
+    }
+
+    const newUser = addUser(safeUserData);
+    res.status(201).json({ success: true, data: newUser });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to register or update user account.', err);
+  }
+});
+
+app.get('/api/users/:id', requireAdminAuth, (req, res) => {
+  try {
+    const user = getUserById(req.params.id);
+    if (!user) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, data: user });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to fetch user.', err);
+  }
+});
+
+app.put('/api/users/:id', requireAdminAuth, (req, res) => {
+  try {
+    const updated = updateUser(req.params.id, req.body);
+    if (!updated) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to update user.', err);
+  }
+});
+
+app.delete('/api/users/:id', requireAdminAuth, (req, res) => {
+  try {
+    const deleted = deleteUser(req.params.id);
+    if (!deleted) return res.status(404).json({ success: false, error: 'User not found' });
+    res.json({ success: true, message: 'User deleted successfully' });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to delete user.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// LAPTOPS ENDPOINTS (Public Catalog Read, Protected Modification)
+// -------------------------------------------------------------
+app.get('/api/laptops', (req, res) => {
+  try {
+    const laptops = getLaptops();
+    res.json({ success: true, count: laptops.length, data: laptops });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve catalog.', err);
+  }
+});
+
+app.post('/api/laptops', requireAdminAuth, (req, res) => {
+  try {
+    const newLaptop = addLaptop(req.body);
+    res.status(201).json({ success: true, data: newLaptop });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to add laptop.', err);
+  }
+});
+
+app.put('/api/laptops/:id', requireAdminAuth, (req, res) => {
+  try {
+    const updated = updateLaptop(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Laptop not found' });
+    }
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to update laptop.', err);
+  }
+});
+
+app.delete('/api/laptops/:id', requireAdminAuth, (req, res) => {
+  try {
+    const deleted = deleteLaptop(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Laptop not found' });
+    }
+    res.json({ success: true, message: 'Laptop deleted successfully' });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to delete laptop.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// ACCESSORIES ENDPOINTS (Public Catalog Read)
+// -------------------------------------------------------------
+app.get('/api/accessories', (req, res) => {
+  try {
+    const acc = getAccessories();
+    res.json({ success: true, count: acc.length, data: acc });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve accessories.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// INQUIRIES ENDPOINTS (Public Submission, Protected Management)
+// -------------------------------------------------------------
+app.get('/api/inquiries', requireAdminAuth, (req, res) => {
+  try {
+    const inquiries = getInquiries();
+    res.json({ success: true, count: inquiries.length, data: inquiries });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve inquiries.', err);
+  }
+});
+
+app.post('/api/inquiries', submissionLimiter, (req, res) => {
+  try {
+    const newInquiry = addInquiry(req.body);
+    res.status(201).json({ success: true, data: newInquiry });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to submit inquiry.', err);
+  }
+});
+
+app.put('/api/inquiries/:id', requireAdminAuth, (req, res) => {
+  try {
+    const updated = updateInquiryStatus(req.params.id, req.body.status);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to update inquiry.', err);
+  }
+});
+
+app.delete('/api/inquiries/:id', requireAdminAuth, (req, res) => {
+  try {
+    const deleted = deleteInquiry(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Inquiry not found' });
+    }
+    res.json({ success: true, message: 'Inquiry deleted successfully' });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to delete inquiry.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// SERVICE TICKETS ENDPOINTS (Public Submission, Protected Management)
+// -------------------------------------------------------------
+app.get('/api/services', requireAdminAuth, (req, res) => {
+  try {
+    const tickets = getServiceTickets();
+    res.json({ success: true, count: tickets.length, data: tickets });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve service tickets.', err);
+  }
+});
+
+app.post('/api/services', submissionLimiter, (req, res) => {
+  try {
+    const newTicket = addServiceTicket(req.body);
+    res.status(201).json({ success: true, data: newTicket });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to submit service ticket.', err);
+  }
+});
+
+app.put('/api/services/:id', requireAdminAuth, (req, res) => {
+  try {
+    const updated = updateServiceTicketStatus(req.params.id, req.body.status);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to update ticket.', err);
+  }
+});
+
+app.delete('/api/services/:id', requireAdminAuth, (req, res) => {
+  try {
+    const deleted = deleteServiceTicket(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Ticket not found' });
+    }
+    res.json({ success: true, message: 'Ticket deleted successfully' });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to delete ticket.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// ORDERS & SALES ENDPOINTS (Public Submission, Protected Management)
+// -------------------------------------------------------------
+app.get('/api/orders', requireAdminAuth, (req, res) => {
+  try {
+    const orders = getOrders();
+    res.json({ success: true, count: orders.length, data: orders });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve orders.', err);
+  }
+});
+
+app.post('/api/orders', submissionLimiter, (req, res) => {
+  try {
+    // Basic business logic validation
+    const orderData = req.body || {};
+    orderData.quantity = Math.max(1, Math.min(Number(orderData.quantity) || 1, 1000));
+    orderData.totalAmount = Math.max(0, Number(orderData.totalAmount) || 0);
+    orderData.amountPaid = Math.max(0, Number(orderData.amountPaid) || 0);
+
+    const newOrder = addOrder(orderData);
+    res.status(201).json({ success: true, data: newOrder });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to record order.', err);
+  }
+});
+
+app.put('/api/orders/:id', requireAdminAuth, (req, res) => {
+  try {
+    const updated = updateOrderStatus(req.params.id, req.body.status);
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+    res.json({ success: true, data: updated });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to update order.', err);
+  }
+});
+
+app.delete('/api/orders/:id', requireAdminAuth, (req, res) => {
+  try {
+    const deleted = deleteOrder(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Order not found' });
+    }
+    res.json({ success: true, message: 'Order deleted successfully' });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to delete order.', err);
+  }
+});
+
+// -------------------------------------------------------------
+// DATABASE INSPECTION & SQL CONSOLE (Strictly Protected)
+// -------------------------------------------------------------
+app.get('/api/sql/info', requireAdminAuth, (req, res) => {
+  try {
+    const stats = getDatabaseStats();
+    res.json({ success: true, data: stats });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to fetch database info.', err);
+  }
+});
+
+app.get('/api/sql/tables', requireAdminAuth, (req, res) => {
+  try {
+    const tables = getTableList();
+    const stats = getDatabaseStats();
+    res.json({ success: true, count: tables.length, data: tables, stats });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to fetch database tables.', err);
+  }
+});
+
+app.get('/api/sql/table/:table', requireAdminAuth, (req, res) => {
+  try {
+    // Validate table name against path traversal
+    const safeTable = req.params.table.replace(/[^a-zA-Z0-9_]/g, '');
+    const limit = Math.min(Number(req.query.limit) || 100, 500);
+    const offset = Math.max(0, Number(req.query.offset) || 0);
+    const result = getTableRows(safeTable, limit, offset);
+    res.json({ success: true, data: result });
+  } catch (err) {
+    sendSafeError(res, 400, 'Invalid table query.', err);
+  }
+});
+
+app.post('/api/sql/query', requireAdminAuth, (req, res) => {
+  try {
+    const { query } = req.body;
+    if (!query || typeof query !== 'string') {
+      return res.status(400).json({ success: false, error: 'SQL query string is required' });
+    }
+    const result = executeCustomSqlQuery(query);
+    if (!result.success) {
+      return res.status(400).json(result);
+    }
+    res.json(result);
+  } catch (err) {
+    sendSafeError(res, 500, 'SQL query execution failed.', err);
+  }
+});
+
+// Protected Database Downloads
+app.get('/api/data/download', requireAdminAuth, (req, res) => {
+  try {
+    if (fs.existsSync(JSON_DB_FILE)) {
+      res.download(JSON_DB_FILE, 'rs_refurbished_database.json');
+    } else {
+      res.status(404).json({ success: false, error: 'Database file not found' });
+    }
+  } catch (err) {
+    sendSafeError(res, 500, 'Download failed.', err);
+  }
+});
+
+app.get('/api/data/download-excel', requireAdminAuth, async (req, res) => {
+  try {
+    const db = loadDatabase();
+    await syncDatabaseToExcel(db);
+    if (fs.existsSync(EXCEL_DB_FILE)) {
+      res.download(EXCEL_DB_FILE, 'rs_refurbished_database.xlsx');
+    } else {
+      res.status(404).json({ success: false, error: 'Excel database file not found' });
+    }
+  } catch (err) {
+    sendSafeError(res, 500, 'Excel download failed.', err);
+  }
+});
+
+app.get('/api/sql/download', requireAdminAuth, (req, res) => {
+  try {
+    if (fs.existsSync(JSON_DB_FILE)) {
+      res.download(JSON_DB_FILE, 'rs_refurbished_database.json');
+    } else {
+      res.status(404).json({ success: false, error: 'Database file not found' });
+    }
+  } catch (err) {
+    sendSafeError(res, 500, 'Download failed.', err);
+  }
+});
+
+app.get('/api/sql/dump', requireAdminAuth, (req, res) => {
+  try {
+    const dump = getSqlDump();
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="rs_refurbished_database.json"');
+    res.send(dump);
+  } catch (err) {
+    sendSafeError(res, 500, 'Dump failed.', err);
+  }
+});
+
+app.post('/api/admin/reset', requireAdminAuth, (req, res) => {
   try {
     resetDatabase();
     res.json({ success: true, message: 'Database reset to factory defaults', stats: getDatabaseStats() });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendSafeError(res, 500, 'Reset failed.', err);
   }
 });
 
-app.get('/api/admin/export', (req, res) => {
+app.get('/api/admin/export', requireAdminAuth, (req, res) => {
   try {
     const db = loadDatabase();
     res.json({ success: true, data: db });
   } catch (err) {
-    res.status(500).json({ success: false, error: err.message });
+    sendSafeError(res, 500, 'Export failed.', err);
   }
 });
 
-// Serve Static Frontend for Production
+// -------------------------------------------------------------
+// GOOGLE GEMINI LLM AI CHAT ADVISOR (Rate-Limited & Hardened)
+// -------------------------------------------------------------
+app.get('/api/ai/status', (req, res) => {
+  res.json({
+    geminiConfigured: !!(process.env.GEMINI_API_KEY && process.env.GEMINI_API_KEY.trim()),
+    model: process.env.GEMINI_MODEL || 'gemini-1.5-flash'
+  });
+});
+
+app.post('/api/ai/chat', aiChatLimiter, async (req, res) => {
+  try {
+    const { message, history = [] } = req.body;
+    const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ success: false, error: 'A valid message string is required.' });
+    }
+
+    // Cap message length to 1000 characters to prevent prompt injection overflow
+    const safeMessage = message.slice(0, 1000).trim();
+
+    if (!apiKey) {
+      return res.json({
+        success: false,
+        fallback: true,
+        reason: 'NO_API_KEY',
+        message: 'Google Gemini API key not configured. Using smart built-in advisor.'
+      });
+    }
+
+    // Build Contextual Inventory Knowledge
+    const db = loadDatabase();
+    const inventoryLaptops = (db.laptops || []).map(l => ({
+      name: l.name,
+      brand: l.brand,
+      model: l.model,
+      processor: l.processor,
+      ram: l.ram,
+      storage: l.storage,
+      condition: l.conditionGrade,
+      status: l.inStock ? 'In Stock' : 'Out of Stock'
+    }));
+
+    const systemPrompt = `You are the official "RS Refurbished AI Advisor" for RS Refurbished Laptops & Services (Helpline & WhatsApp: +91 8668848486, Location: Sant Tukaram Nagar, Pimpri, Pune 411018, Maharashtra, India).
+You provide helpful, friendly, and expert hardware advice across Desktop, PC, and Mobile users.
+
+Store Core Offerings:
+1. Certified Grade A+ Refurbished Laptops (ThinkPad, Latitude, MacBook, HP EliteBook, Workstations).
+2. 32-Point Quality Diagnostic Check on every machine.
+3. 1-Month Complete Functional Testing Warranty on all parts (motherboard, screen, RAM, SSD, battery).
+4. Insured Doorstep Delivery across India.
+5. In-house Chip-Level Laptop Repair Lab in Pimpri, Pune (screen/battery replacement, RAM/SSD upgrades, liquid spill cleaning).
+6. Corporate B2B Fleet Rentals and Bulk Procurement (5 to 100+ matching laptops with 18% GST invoice).
+
+STRICT BUSINESS RULES:
+- NEVER state static fixed prices. RS Refurbished provides customized wholesale pricing. Always tell the customer that they get the best discounted wholesale deal by messaging RS Refurbished on WhatsApp (+91 8668848486).
+- NEVER quote specific unit stock counts (NEVER say "only 4 left in stock"). Only state whether a model is "In Stock" or "Out of Stock".
+- Recommend specific matching models from the Live Store Inventory below when appropriate:
+${JSON.stringify(inventoryLaptops, null, 2)}
+
+Format guidelines:
+- Keep responses readable and concise (use markdown bolding, bullet points, and clean spacing).
+- End recommendations with an invitation to DM on WhatsApp (+91 8668848486) for today's live pictures and deal price.`;
+
+    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
+    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+
+    // Format chat history for Gemini API
+    const formattedContents = [];
+    if (Array.isArray(history) && history.length > 0) {
+      history.slice(-8).forEach(item => {
+        if (item.sender === 'user' || item.role === 'user') {
+          formattedContents.push({ role: 'user', parts: [{ text: String(item.text || item.content || '').slice(0, 500) }] });
+        } else if (item.sender === 'ai' || item.role === 'model') {
+          formattedContents.push({ role: 'model', parts: [{ text: String(item.text || item.content || '').slice(0, 500) }] });
+        }
+      });
+    }
+
+    formattedContents.push({
+      role: 'user',
+      parts: [{ text: safeMessage }]
+    });
+
+    const geminiPayload = {
+      system_instruction: {
+        parts: [{ text: systemPrompt }]
+      },
+      contents: formattedContents,
+      generationConfig: {
+        temperature: 0.7,
+        maxOutputTokens: 600
+      }
+    };
+
+    const response = await fetch(geminiUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(geminiPayload)
+    });
+
+    if (!response.ok) {
+      const errBody = await response.text();
+      console.error('Gemini API Error:', response.status, errBody);
+      return res.json({
+        success: false,
+        fallback: true,
+        reason: 'API_ERROR',
+        status: response.status,
+        error: 'Failed to contact Gemini API. Using smart built-in advisor.'
+      });
+    }
+
+    const data = await response.json();
+    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+
+    if (!replyText) {
+      return res.json({ success: false, fallback: true, reason: 'EMPTY_RESPONSE' });
+    }
+
+    return res.json({
+      success: true,
+      reply: replyText,
+      model: modelName
+    });
+
+  } catch (error) {
+    sendSafeError(res, 500, 'Server AI Chat handler error.', error);
+  }
+});
+
+// -------------------------------------------------------------
+// STATIC FRONTEND SERVING
+// -------------------------------------------------------------
 const distPath = path.join(__dirname, 'dist');
 app.use(express.static(distPath));
 
@@ -589,7 +953,6 @@ app.use((req, res) => {
     <html>
       <body style="font-family: sans-serif; padding: 2rem; text-align: center;">
         <h2>RS Refurbished Laptops & Services API is Running</h2>
-        <p>Database: <strong>JSON Document Store</strong> (<code>data/rs_refurbished_database.json</code>)</p>
         <p>Official Helpline: <strong>+91 8668848486</strong></p>
       </body>
     </html>
@@ -600,11 +963,10 @@ app.listen(PORT, () => {
   console.log(`\n======================================================`);
   console.log(`  RS Refurbished Laptops & Services Server`);
   console.log(`  Database Backend: JSON Document Store (Persistent Database)`);
-  console.log(`  Database File: data/rs_refurbished_database.json`);
+  console.log(`  Security: OWASP Hardened (HMAC Auth, Rate Limiter, XSS/CSP)`);
   console.log(`  Server running on: http://localhost:${PORT}`);
   console.log(`  Helpline Contact: +91 8668848486`);
   console.log(`======================================================\n`);
 });
 
 export default app;
-

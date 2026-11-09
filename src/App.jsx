@@ -10,7 +10,8 @@ import Testimonials from './components/common/Testimonials';
 import QuoteCartDrawer from './components/cart/QuoteCartDrawer';
 import AdminModal from './components/admin/AdminModal';
 import AuthModal from './components/auth/AuthModal';
-import { Phone, Laptop, ShoppingCart, Sparkles } from 'lucide-react';
+import RsAiAdvisor from './components/ai/RsAiAdvisor';
+import { Phone, Laptop, ShoppingCart, Sparkles, Bot } from 'lucide-react';
 
 import {
   fetchLaptops,
@@ -30,7 +31,8 @@ import {
   fetchOrders,
   createOrderApi,
   updateOrderStatusApi,
-  resetDatabaseApi
+  resetDatabaseApi,
+  clearAdminToken
 } from './services/api';
 
 import {
@@ -68,8 +70,9 @@ export default function App() {
   const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
   const [isAdminLoggedIn, setIsAdminLoggedIn] = useState(() => {
     try {
+      const token = sessionStorage.getItem('rs_admin_session_token');
       const saved = localStorage.getItem('rs_current_user');
-      if (saved) {
+      if (saved && token) {
         const parsed = JSON.parse(saved);
         return parsed?.role === 'admin';
       }
@@ -90,6 +93,7 @@ export default function App() {
   const handleLogout = () => {
     setCurrentUser(null);
     setIsAdminLoggedIn(false);
+    clearAdminToken();
     try {
       localStorage.removeItem('rs_current_user');
     } catch (e) {}
@@ -117,6 +121,33 @@ export default function App() {
   useEffect(() => {
     saveStoredCart(cart);
   }, [cart]);
+
+  // Secret Owner Admin Portal Access:
+  // 1. Keyboard Shortcut: Press Ctrl + Shift + A (or Alt + A)
+  // 2. Secret URL: visit http://localhost:5173/#admin or ?admin
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if ((e.ctrlKey && e.shiftKey && e.key.toLowerCase() === 'a') || (e.altKey && e.key.toLowerCase() === 'a')) {
+        e.preventDefault();
+        setIsAdminModalOpen(true);
+      }
+    };
+
+    const checkSecretUrl = () => {
+      if (window.location.hash === '#admin' || window.location.search.includes('admin')) {
+        setIsAdminModalOpen(true);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('hashchange', checkSecretUrl);
+    checkSecretUrl();
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('hashchange', checkSecretUrl);
+    };
+  }, []);
 
   // Cart operations
   const handleAddToCart = (laptop) => {
@@ -405,6 +436,12 @@ export default function App() {
           <span>Cart</span>
         </button>
       </nav>
+
+      {/* 9. RS AI Laptop Advisor & Assistant (Desktop, Laptop/PC & Mobile Responsive) */}
+      <RsAiAdvisor 
+        laptops={laptops}
+        onScrollToSection={scrollToSection}
+      />
 
     </div>
   );

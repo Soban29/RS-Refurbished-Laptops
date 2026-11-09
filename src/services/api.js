@@ -15,6 +15,70 @@ import {
 } from '../utils/storage';
 
 const API_BASE = '/api';
+const TOKEN_STORAGE_KEY = 'rs_admin_session_token';
+
+// -------------------------------------------------------------
+// SECURE SESSION TOKEN MANAGEMENT (Session-Scoped in Memory / sessionStorage)
+// -------------------------------------------------------------
+export const getAdminToken = () => {
+  try {
+    return sessionStorage.getItem(TOKEN_STORAGE_KEY) || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+export const setAdminToken = (token) => {
+  try {
+    if (token) {
+      sessionStorage.setItem(TOKEN_STORAGE_KEY, token);
+    } else {
+      sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+    }
+  } catch (e) {}
+};
+
+export const clearAdminToken = () => {
+  try {
+    sessionStorage.removeItem(TOKEN_STORAGE_KEY);
+  } catch (e) {}
+};
+
+export const getAuthHeaders = () => {
+  const token = getAdminToken();
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+};
+
+// -------------------------------------------------------------
+// ADMIN AUTHENTICATION API
+// -------------------------------------------------------------
+export const adminLoginApi = async (passcode) => {
+  try {
+    const res = await fetch(`${API_BASE}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ passcode })
+    });
+    const data = await res.json();
+    if (res.ok && data.success && data.token) {
+      setAdminToken(data.token);
+      return { success: true, token: data.token };
+    }
+    return {
+      success: false,
+      error: data.error || 'Invalid owner passcode. Access denied.'
+    };
+  } catch (err) {
+    return {
+      success: false,
+      error: 'Could not connect to authentication server. Please verify your connection.'
+    };
+  }
+};
 
 // Helper for fetch with timeout and error fallback
 async function fetchWithFallback(url, options = {}, fallbackFn) {
@@ -34,17 +98,21 @@ async function fetchWithFallback(url, options = {}, fallbackFn) {
 }
 
 // -------------------------------------------------------------
-// USERS API (Users Collection)
+// USERS API (Users Collection - Protected)
 // -------------------------------------------------------------
 export const fetchUsers = async () => {
-  return fetchWithFallback(`${API_BASE}/users`, {}, () => getStoredUsers());
+  return fetchWithFallback(
+    `${API_BASE}/users`,
+    { headers: getAuthHeaders() },
+    () => getStoredUsers()
+  );
 };
 
 export const createUserApi = async (user) => {
   try {
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(user)
     });
     if (res.ok) {
@@ -62,7 +130,7 @@ export const updateUserApi = async (user) => {
   try {
     const res = await fetch(`${API_BASE}/users/${user.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(user)
     });
     if (res.ok) {
@@ -78,7 +146,10 @@ export const updateUserApi = async (user) => {
 
 export const deleteUserApi = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/users/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/users/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     if (res.ok) return true;
   } catch (err) {}
   const current = getStoredUsers();
@@ -89,15 +160,17 @@ export const deleteUserApi = async (id) => {
 // -------------------------------------------------------------
 // LAPTOPS API (Laptops Collection)
 // -------------------------------------------------------------
+// Public catalog reading
 export const fetchLaptops = async () => {
   return fetchWithFallback(`${API_BASE}/laptops`, {}, () => getStoredLaptops());
 };
 
+// Protected modification endpoints
 export const createLaptop = async (laptop) => {
   try {
     const res = await fetch(`${API_BASE}/laptops`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(laptop)
     });
     if (res.ok) {
@@ -116,7 +189,7 @@ export const updateLaptopApi = async (laptop) => {
   try {
     const res = await fetch(`${API_BASE}/laptops/${laptop.id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify(laptop)
     });
     if (res.ok) {
@@ -132,7 +205,10 @@ export const updateLaptopApi = async (laptop) => {
 
 export const deleteLaptopApi = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/laptops/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/laptops/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     if (res.ok) return true;
   } catch (err) {}
   const current = getStoredLaptops();
@@ -143,10 +219,16 @@ export const deleteLaptopApi = async (id) => {
 // -------------------------------------------------------------
 // INQUIRIES API (Inquiries Collection)
 // -------------------------------------------------------------
+// Protected listing
 export const fetchInquiries = async () => {
-  return fetchWithFallback(`${API_BASE}/inquiries`, {}, () => getStoredInquiries());
+  return fetchWithFallback(
+    `${API_BASE}/inquiries`,
+    { headers: getAuthHeaders() },
+    () => getStoredInquiries()
+  );
 };
 
+// Public creation
 export const createInquiryApi = async (inquiry) => {
   try {
     const res = await fetch(`${API_BASE}/inquiries`, {
@@ -165,11 +247,12 @@ export const createInquiryApi = async (inquiry) => {
   return inquiry;
 };
 
+// Protected updates
 export const updateInquiryStatusApi = async (id, status) => {
   try {
     const res = await fetch(`${API_BASE}/inquiries/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status })
     });
     if (res.ok) {
@@ -185,7 +268,10 @@ export const updateInquiryStatusApi = async (id, status) => {
 
 export const deleteInquiryApi = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/inquiries/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/inquiries/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     if (res.ok) return true;
   } catch (err) {}
   const current = getStoredInquiries();
@@ -196,10 +282,16 @@ export const deleteInquiryApi = async (id) => {
 // -------------------------------------------------------------
 // SERVICE TICKETS API (Service Tickets Collection)
 // -------------------------------------------------------------
+// Protected listing
 export const fetchServiceTickets = async () => {
-  return fetchWithFallback(`${API_BASE}/services`, {}, () => getStoredServiceTickets());
+  return fetchWithFallback(
+    `${API_BASE}/services`,
+    { headers: getAuthHeaders() },
+    () => getStoredServiceTickets()
+  );
 };
 
+// Public ticket submission
 export const createServiceTicketApi = async (ticket) => {
   try {
     const res = await fetch(`${API_BASE}/services`, {
@@ -218,11 +310,12 @@ export const createServiceTicketApi = async (ticket) => {
   return ticket;
 };
 
+// Protected updates
 export const updateServiceStatusApi = async (id, status) => {
   try {
     const res = await fetch(`${API_BASE}/services/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status })
     });
     if (res.ok) {
@@ -238,7 +331,10 @@ export const updateServiceStatusApi = async (id, status) => {
 
 export const deleteServiceTicketApi = async (id) => {
   try {
-    const res = await fetch(`${API_BASE}/services/${id}`, { method: 'DELETE' });
+    const res = await fetch(`${API_BASE}/services/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
     if (res.ok) return true;
   } catch (err) {}
   const current = getStoredServiceTickets();
@@ -249,10 +345,16 @@ export const deleteServiceTicketApi = async (id) => {
 // -------------------------------------------------------------
 // ORDERS & SALES API (Orders Collection)
 // -------------------------------------------------------------
+// Protected listing
 export const fetchOrders = async () => {
-  return fetchWithFallback(`${API_BASE}/orders`, {}, () => getStoredOrders());
+  return fetchWithFallback(
+    `${API_BASE}/orders`,
+    { headers: getAuthHeaders() },
+    () => getStoredOrders()
+  );
 };
 
+// Public creation
 export const createOrderApi = async (order) => {
   try {
     const res = await fetch(`${API_BASE}/orders`, {
@@ -268,11 +370,12 @@ export const createOrderApi = async (order) => {
   return addStoredOrder(order);
 };
 
+// Protected updates
 export const updateOrderStatusApi = async (id, status) => {
   try {
     const res = await fetch(`${API_BASE}/orders/${id}`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ status })
     });
     if (res.ok) {
@@ -286,12 +389,27 @@ export const updateOrderStatusApi = async (id, status) => {
   return { id, status };
 };
 
+export const deleteOrderApi = async (id) => {
+  try {
+    const res = await fetch(`${API_BASE}/orders/${id}`, {
+      method: 'DELETE',
+      headers: getAuthHeaders()
+    });
+    if (res.ok) return true;
+  } catch (err) {}
+  const current = getStoredOrders();
+  saveStoredOrders(current.filter(o => o.id !== id));
+  return true;
+};
+
 // -------------------------------------------------------------
-// DATABASE INSPECTION & METADATA API
+// DATABASE INSPECTION & METADATA API (Protected)
 // -------------------------------------------------------------
 export const fetchSqlInfo = async () => {
   try {
-    const res = await fetch(`${API_BASE}/sql/info`);
+    const res = await fetch(`${API_BASE}/sql/info`, {
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       const json = await res.json();
       return json.data;
@@ -315,7 +433,9 @@ export const fetchSqlInfo = async () => {
 
 export const fetchSqlTables = async () => {
   try {
-    const res = await fetch(`${API_BASE}/sql/tables`);
+    const res = await fetch(`${API_BASE}/sql/tables`, {
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       const json = await res.json();
       return json.data;
@@ -332,7 +452,10 @@ export const fetchSqlTables = async () => {
 
 export const fetchSqlTableRows = async (tableName, limit = 100, offset = 0) => {
   try {
-    const res = await fetch(`${API_BASE}/sql/table/${encodeURIComponent(tableName)}?limit=${limit}&offset=${offset}`);
+    const res = await fetch(
+      `${API_BASE}/sql/table/${encodeURIComponent(tableName)}?limit=${limit}&offset=${offset}`,
+      { headers: getAuthHeaders() }
+    );
     if (res.ok) {
       const json = await res.json();
       return json.data;
@@ -359,7 +482,7 @@ export const runSqlQueryApi = async (sqlQuery) => {
   try {
     const res = await fetch(`${API_BASE}/sql/query`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: getAuthHeaders(),
       body: JSON.stringify({ query: sqlQuery })
     });
     const json = await res.json();
@@ -372,18 +495,64 @@ export const runSqlQueryApi = async (sqlQuery) => {
   }
 };
 
-export const getDownloadDatabaseUrl = () => `${API_BASE}/data/download`;
-export const getDownloadSqliteUrl = () => `${API_BASE}/data/download`;
-export const getDownloadSqlDumpUrl = () => `${API_BASE}/data/download`;
+// Download URLs with auth token query param for browser direct download
+export const getDownloadDatabaseUrl = () => {
+  const token = getAdminToken();
+  return `${API_BASE}/data/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+};
 
-// Reset Database API
+export const getDownloadSqliteUrl = () => getDownloadDatabaseUrl();
+
+export const getDownloadSqlDumpUrl = () => {
+  const token = getAdminToken();
+  return `${API_BASE}/data/download${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+};
+
+export const getDownloadExcelUrl = () => {
+  const token = getAdminToken();
+  return `${API_BASE}/data/download-excel${token ? `?token=${encodeURIComponent(token)}` : ''}`;
+};
+
+// Reset Database API (Protected)
 export const resetDatabaseApi = async () => {
   try {
-    const res = await fetch(`${API_BASE}/admin/reset`, { method: 'POST' });
+    const res = await fetch(`${API_BASE}/admin/reset`, {
+      method: 'POST',
+      headers: getAuthHeaders()
+    });
     if (res.ok) {
       const data = await res.json();
       return data;
     }
   } catch (err) {}
   return resetToFactoryData();
+};
+
+// -------------------------------------------------------------
+// GOOGLE GEMINI LLM AI CHAT API
+// -------------------------------------------------------------
+export const fetchAiChatReplyApi = async (message, history = []) => {
+  try {
+    const res = await fetch(`${API_BASE}/ai/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, history })
+    });
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {
+    console.warn('AI Chat server endpoint error:', err.message);
+  }
+  return { success: false, fallback: true };
+};
+
+export const fetchAiChatStatusApi = async () => {
+  try {
+    const res = await fetch(`${API_BASE}/ai/status`);
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (err) {}
+  return { geminiConfigured: false };
 };

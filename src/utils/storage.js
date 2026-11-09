@@ -7,7 +7,7 @@ import {
 } from '../data/initialLaptops';
 
 const KEYS = {
-  LAPTOPS: 'rs_laptops_inventory_v2',
+  LAPTOPS: 'rs_laptops_inventory_v3',
   INQUIRIES: 'rs_b2b_inquiries_v1',
   SERVICES: 'rs_service_tickets_v1',
   CART: 'rs_quote_cart_v1',

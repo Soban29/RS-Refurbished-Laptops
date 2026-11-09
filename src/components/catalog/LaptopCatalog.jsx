@@ -164,7 +164,7 @@ export default function LaptopCatalog({
     const storageOptions = [256, 512, 1024];
     const processorOptions = ["Intel Core i3", "Intel Core i5", "Intel Core i7", "AMD Ryzen", "Apple Silicon"];
     const screenOptions = [13.3, 14, 15.6];
-    const gradeOptions = ["Grade A+ (Like New)", "Grade A+ (Pristine)", "Grade A (Excellent)"];
+    const gradeOptions = ["Grade A++ (Like New)", "Grade A+ (Like New)"];
     const pricePresets = [
       { min: 0, max: 200000 },
       { min: 0, max: 20000 },
@@ -347,13 +347,14 @@ export default function LaptopCatalog({
       const bAvail = b.inStock && b.stockCount > 0 ? 1 : 0;
       if (aAvail !== bAvail) return bAvail - aAvail;
 
+      if (sortBy === 'grade') {
+        const gradeRank = { 'Grade A+ (Pristine)': 3, 'Grade A+ (Like New)': 2, 'Grade A (Excellent)': 1 };
+        return (gradeRank[b.conditionGrade] || 0) - (gradeRank[a.conditionGrade] || 0);
+      }
+      if (sortBy === 'ram-desc') return (b.ramSize || 0) - (a.ramSize || 0);
+      if (sortBy === 'brand') return a.brand.localeCompare(b.brand);
       if (sortBy === 'price-asc') return a.price - b.price;
       if (sortBy === 'price-desc') return b.price - a.price;
-      if (sortBy === 'discount') {
-        const discA = (a.originalPrice - a.price) / a.originalPrice;
-        const discB = (b.originalPrice - b.price) / b.originalPrice;
-        return discB - discA;
-      }
       // default: featured first
       if (a.featured && !b.featured) return -1;
       if (!a.featured && b.featured) return 1;
@@ -383,20 +384,23 @@ export default function LaptopCatalog({
     setActiveQuickPill(pillId);
     if (pillId === 'all') {
       resetFilters();
-    } else if (pillId === 'under-25k') {
-      setFilters(prev => ({ ...prev, minPrice: 0, maxPrice: 25000 }));
-    } else if (pillId === '16gb-ram') {
-      setFilters(prev => ({ ...prev, rams: [16] }));
     } else if (pillId === 'dell') {
-      setFilters(prev => ({ ...prev, brands: ['Dell'] }));
-    } else if (pillId === 'thinkpad') {
-      setFilters(prev => ({ ...prev, brands: ['Lenovo'] }));
-    } else if (pillId === 'apple') {
-      setFilters(prev => ({ ...prev, brands: ['Apple'] }));
+      setFilters(prev => ({ ...prev, brands: ['Dell'], processors: [], rams: [], screens: [], grades: [] }));
+    } else if (pillId === 'hp') {
+      setFilters(prev => ({ ...prev, brands: ['HP'], processors: [], rams: [], screens: [], grades: [] }));
     } else if (pillId === 'i7') {
-      setFilters(prev => ({ ...prev, processors: ['Intel Core i7'] }));
+      setFilters(prev => ({ ...prev, processors: ['Intel Core i7'], brands: [], rams: [], screens: [], grades: [] }));
+    } else if (pillId === 'i5') {
+      setFilters(prev => ({ ...prev, processors: ['Intel Core i5'], brands: [], rams: [], screens: [], grades: [] }));
+    } else if (pillId === '16gb-ram') {
+      setFilters(prev => ({ ...prev, rams: [16], brands: [], processors: [], screens: [], grades: [] }));
+    } else if (pillId === '15-inch') {
+      setFilters(prev => ({ ...prev, screens: [15.6], brands: [], processors: [], rams: [], grades: [] }));
+    } else if (pillId === 'touch') {
+      resetFilters();
+      setSearchQuery('touch');
     } else if (pillId === 'grade-a') {
-      setFilters(prev => ({ ...prev, grades: ['Grade A+ (Like New)', 'Grade A+ (Pristine)'] }));
+      setFilters(prev => ({ ...prev, grades: ['Grade A++ (Like New)'], brands: [], processors: [], rams: [], screens: [] }));
     }
   };
 
@@ -499,7 +503,7 @@ export default function LaptopCatalog({
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={
                 catalogTab === 'laptops'
-                  ? "Search by ThinkPad, MacBook, i7, 16GB, Dell..."
+                  ? "Search Dell Latitude, HP ProBook, i7, 16GB, Touch, 15.6\"..."
                   : "Search chargers, Logitech mouse, bags, RAM, SSD..."
               }
               className="w-full pl-10 pr-9 py-2 text-xs sm:text-sm bg-slate-50 hover:bg-slate-100/80 focus:bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all"
@@ -552,10 +556,10 @@ export default function LaptopCatalog({
                     onChange={(e) => setSortBy(e.target.value)}
                     className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 font-semibold text-slate-800 text-xs focus:outline-none focus:ring-2 focus:ring-brand-500"
                   >
-                    <option value="featured">Featured & Best Sellers</option>
-                    <option value="price-asc">Price: Low to High</option>
-                    <option value="price-desc">Price: High to Low</option>
-                    <option value="discount">Highest Discount %</option>
+                    <option value="featured">Featured & Best Deals</option>
+                    <option value="grade">Condition: Grade A+ First</option>
+                    <option value="ram-desc">RAM: Highest Memory First</option>
+                    <option value="brand">Brand: A to Z</option>
                   </select>
                 </div>
               </>
@@ -579,13 +583,14 @@ export default function LaptopCatalog({
             </span>
             {[
               { id: 'all', label: 'All Laptops' },
-              { id: 'under-25k', label: '⚡ Under ₹25,000' },
-              { id: '16gb-ram', label: '🔥 16GB RAM' },
               { id: 'dell', label: '💼 Dell Latitude' },
-              { id: 'thinkpad', label: '🏢 Lenovo ThinkPad' },
-              { id: 'apple', label: '🍏 Apple MacBook' },
+              { id: 'hp', label: '⚡ HP Touchscreen' },
               { id: 'i7', label: '🚀 Intel Core i7' },
-              { id: 'grade-a', label: '⭐ Grade A+ Like New' },
+              { id: 'i5', label: '💻 Intel Core i5' },
+              { id: '16gb-ram', label: '🔥 16GB RAM' },
+              { id: '15-inch', label: '🖥️ 15.6" Big Screen' },
+              { id: 'touch', label: '📱 In-Built Touch' },
+              { id: 'grade-a', label: '⭐ Grade A++ Like New' },
             ].map(pill => (
               <button
                 key={pill.id}

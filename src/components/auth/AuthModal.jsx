@@ -13,7 +13,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { createUserApi } from '../../services/api';
+import { createUserApi, adminLoginApi } from '../../services/api';
 
 export default function AuthModal({
   isOpen,
@@ -145,8 +145,13 @@ export default function AuthModal({
     e.preventDefault();
     setErrorMessage('');
 
-    const cleanPass = adminPasscode.trim().toLowerCase();
-    if (cleanPass === 'admin123' || cleanPass === 'admin' || cleanPass === 'rs123') {
+    if (!adminPasscode.trim()) {
+      setErrorMessage('Please enter the owner passcode.');
+      return;
+    }
+
+    const res = await adminLoginApi(adminPasscode.trim());
+    if (res.success) {
       const adminUser = {
         id: 'admin-owner',
         name: 'Store Owner',
@@ -175,7 +180,7 @@ export default function AuthModal({
         }
       }, 500);
     } else {
-      setErrorMessage('Invalid passcode. Please use "admin123" to access owner controls.');
+      setErrorMessage(res.error || 'Invalid passcode. Access denied.');
     }
   };
 
@@ -199,52 +204,18 @@ export default function AuthModal({
                 ? 'bg-gradient-to-br from-amber-500 to-amber-600 text-slate-950' 
                 : 'bg-gradient-to-br from-brand-500 to-cyanAccent-500 text-white'
             }`}>
-              {authMode === 'admin' ? <ShieldCheck className="w-6 h-6" /> : <User className="w-6 h-6" />}
+              {authMode === 'admin' ? <ShieldCheck className="w-6 h-6 text-slate-950" /> : <User className="w-6 h-6" />}
             </div>
             <div>
               <h3 className="text-lg font-bold text-white tracking-tight">
-                {authMode === 'admin' ? 'Owner / Admin Portal' : 'Customer Account'}
+                {authMode === 'admin' ? 'Owner Verification' : 'Customer Account'}
               </h3>
               <p className="text-xs text-slate-300">
                 {authMode === 'admin' 
-                  ? 'Store management, inventory & inquiries' 
-                  : 'Track inquiries, warranty & fast checkout'}
+                  ? 'Private Store Management' 
+                  : 'Track inquiries, testing warranty & direct support'}
               </p>
             </div>
-          </div>
-
-          {/* Role Switcher Tabs (Customer vs Admin) */}
-          <div className="mt-5 grid grid-cols-2 p-1 bg-white/10 backdrop-blur-md rounded-xl text-xs font-semibold">
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('customer');
-                setErrorMessage('');
-              }}
-              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                authMode === 'customer'
-                  ? 'bg-white text-slate-900 shadow-sm'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <User className="w-3.5 h-3.5" />
-              <span>Customer</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setAuthMode('admin');
-                setErrorMessage('');
-              }}
-              className={`py-2 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-all ${
-                authMode === 'admin'
-                  ? 'bg-amber-400 text-slate-950 font-bold shadow-sm'
-                  : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              <Lock className="w-3.5 h-3.5" />
-              <span>Store Owner / Admin</span>
-            </button>
           </div>
         </div>
 
@@ -346,11 +317,18 @@ export default function AuthModal({
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                       <input
-                        type="email"
+                        type="text"
                         required
                         placeholder="you@example.com"
                         value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomerEmail(val);
+                          if (val.trim().toLowerCase() === 'admin' || val.trim().toLowerCase() === 'admin@rsrefurbished.com' || val.trim().toLowerCase() === 'rsadmin') {
+                            setAuthMode('admin');
+                            setErrorMessage('');
+                          }
+                        }}
                         className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all"
                       />
                     </div>
@@ -408,11 +386,18 @@ export default function AuthModal({
                     <div className="relative">
                       <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
                       <input
-                        type="email"
+                        type="text"
                         required
                         placeholder="you@example.com"
                         value={customerEmail}
-                        onChange={(e) => setCustomerEmail(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomerEmail(val);
+                          if (val.trim().toLowerCase() === 'admin' || val.trim().toLowerCase() === 'admin@rsrefurbished.com' || val.trim().toLowerCase() === 'rsadmin') {
+                            setAuthMode('admin');
+                            setErrorMessage('');
+                          }
+                        }}
                         className="w-full pl-9 pr-3 py-2 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500 focus:bg-white transition-all"
                       />
                     </div>
@@ -486,15 +471,12 @@ export default function AuthModal({
                     type="password"
                     autoFocus
                     required
-                    placeholder="Enter Admin Passcode (e.g. admin123)"
+                    placeholder="Enter Owner Passcode..."
                     value={adminPasscode}
                     onChange={(e) => setAdminPasscode(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all"
+                    className="w-full pl-9 pr-3 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 focus:bg-white transition-all font-mono"
                   />
                 </div>
-                <p className="mt-1 text-[11px] text-slate-400">
-                  Default access passcode: <code className="bg-slate-100 px-1 py-0.5 rounded text-slate-600 font-mono">admin123</code>
-                </p>
               </div>
 
               <button
@@ -504,6 +486,21 @@ export default function AuthModal({
                 <ShieldCheck className="w-4 h-4 text-amber-400" />
                 <span>Unlock Owner Dashboard</span>
               </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAuthMode('customer');
+                    setCustomerEmail('');
+                    setAdminPasscode('');
+                    setErrorMessage('');
+                  }}
+                  className="text-xs text-slate-400 hover:text-slate-600 underline"
+                >
+                  Return to Customer Sign In
+                </button>
+              </div>
             </form>
           )}
 
