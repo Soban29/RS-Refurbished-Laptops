@@ -92,7 +92,7 @@ export default function CorporateSolutions({ onInquirySubmit }) {
             Corporate IT & Enterprise Laptop Solutions
           </h2>
           <p className="text-sm sm:text-base text-slate-600 mt-3 leading-relaxed">
-            Equip your enterprise, development team, or industrial plant with Grade-A certified laptops at 60-70% lower CAPEX. Full 18% GST invoice credit, custom OS deployment, and guaranteed maintenance SLA.
+            Equip your enterprise, development team, or industrial plant with Grade-A certified laptops at 60-70% lower CAPEX. Custom OS deployment, guaranteed maintenance SLA, and dedicated account manager.
           </p>
         </div>
 

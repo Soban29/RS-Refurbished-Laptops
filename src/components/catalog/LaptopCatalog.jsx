@@ -83,13 +83,6 @@ export default function LaptopCatalog({
         }
       }
 
-      // 2. Price Range
-      if (excludeDim !== 'price') {
-        if (laptop.price < filters.minPrice || laptop.price > filters.maxPrice) {
-          return false;
-        }
-      }
-
       // 3. Brands
       if (excludeDim !== 'brands' && filters.brands.length > 0) {
         if (!filters.brands.includes(laptop.brand)) return false;

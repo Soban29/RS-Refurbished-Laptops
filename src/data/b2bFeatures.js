@@ -17,7 +17,7 @@ export const B2B_SOLUTIONS = [
     description: "Scale your team up or down without massive capital expenditure. Short-term and long-term rental plans with zero maintenance overhead.",
     icon: "CalendarCheck2",
     benefits: [
-      "Rentals starting from just ₹1,299 / month",
+      "Competitive monthly rental plans for registered companies",
       "Zero upfront security deposit for registered companies",
       "Free swap/upgrade as project requirements scale",
       "Immediate next-day delivery for urgent batches"

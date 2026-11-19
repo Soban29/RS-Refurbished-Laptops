@@ -327,7 +327,7 @@ export const INITIAL_ORDERS = [
     paymentStatus: "Paid",
     paymentMode: "NEFT / Bank Transfer",
     paymentRef: "HDFC-N9283419",
-    notes: "Full payment confirmed in HDFC Current Account. Invoiced with 18% GST ITC."
+    notes: "Full payment confirmed in HDFC Current Account. Proper commercial invoice provided."
   },
   {
     id: "ORD-2026-903",

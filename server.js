@@ -690,6 +690,53 @@ app.delete('/api/orders/:id', requireAdminAuth, (req, res) => {
 });
 
 // -------------------------------------------------------------
+// CUSTOMER REVIEWS ENDPOINTS (Public Read & Submission)
+// -------------------------------------------------------------
+app.get('/api/reviews', (req, res) => {
+  try {
+    const db = loadDatabase();
+    const reviews = (db.reviews || []).filter(r => r.approved !== false);
+    res.json({ success: true, reviews });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to retrieve reviews.', err);
+  }
+});
+
+app.post('/api/reviews', submissionLimiter, (req, res) => {
+  try {
+    const { name, city, rating, text, laptopModel } = req.body;
+
+    if (!name || !rating || !text) {
+      return res.status(400).json({ success: false, error: 'Name, rating, and review text are required.' });
+    }
+    if (rating < 1 || rating > 5) {
+      return res.status(400).json({ success: false, error: 'Rating must be between 1 and 5.' });
+    }
+
+    const db = loadDatabase();
+    if (!db.reviews) db.reviews = [];
+
+    const newReview = {
+      id: `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
+      name: String(name).trim().slice(0, 100),
+      city: city ? String(city).trim().slice(0, 50) : '',
+      rating: Number(rating),
+      text: String(text).trim().slice(0, 1000),
+      laptopModel: laptopModel ? String(laptopModel).trim().slice(0, 100) : '',
+      date: new Date().toISOString(),
+      approved: true
+    };
+
+    db.reviews.push(newReview);
+    saveDatabase(db);
+
+    res.json({ success: true, review: newReview });
+  } catch (err) {
+    sendSafeError(res, 500, 'Failed to submit review.', err);
+  }
+});
+
+// -------------------------------------------------------------
 // DATABASE INSPECTION & SQL CONSOLE (Strictly Protected)
 // -------------------------------------------------------------
 app.get('/api/sql/info', requireAdminAuth, (req, res) => {
@@ -852,26 +899,33 @@ app.post('/api/ai/chat', aiChatLimiter, async (req, res) => {
       status: l.inStock ? 'In Stock' : 'Out of Stock'
     }));
 
-    const systemPrompt = `You are the official "RS Refurbished AI Advisor" for RS Refurbished Laptops & Services (Helpline & WhatsApp: +91 8668848486, Location: Sant Tukaram Nagar, Pimpri, Pune 411018, Maharashtra, India).
-You provide helpful, friendly, and expert hardware advice across Desktop, PC, and Mobile users.
+    const systemPrompt = `You are "RS Assistant", the friendly and knowledgeable store assistant for RS Refurbished Laptops & Services (WhatsApp & Helpline: +91 8668848486, Location: Sant Tukaram Nagar, Pimpri, Pune 411018, Maharashtra, India).
 
-Store Core Offerings:
-1. Certified Grade A+ Refurbished Laptops (ThinkPad, Latitude, MacBook, HP EliteBook, Workstations).
-2. 32-Point Quality Diagnostic Check on every machine.
-3. 1-Month Complete Functional Testing Warranty on all parts (motherboard, screen, RAM, SSD, battery).
+Your personality: Warm, conversational, and helpful — like a knowledgeable friend who works at a tech store. You speak naturally, use friendly language, and never sound robotic or scripted.
+
+IMPORTANT — Answer ANY question the customer asks:
+- If it's about laptops, tech, repairs, accessories, specs, software — give a genuinely helpful, detailed answer.
+- If it's a general life question, fun question, advice, or anything else — answer it warmly and naturally like a human friend would, then gently tie it back to the store if relevant.
+- NEVER say "I can only help with laptops" or refuse to answer. Be a good conversationalist.
+- NEVER say you are "powered by Google Gemini" or mention any AI model name. You are simply "RS Assistant".
+
+About the Store:
+1. Certified Grade A+ Refurbished Laptops — only the best quality machines.
+2. 32-Point Quality Diagnostic Check on every machine before sale.
+3. 1-Month Complete Functional Testing Warranty on all parts.
 4. Insured Doorstep Delivery across India.
-5. In-house Chip-Level Laptop Repair Lab in Pimpri, Pune (screen/battery replacement, RAM/SSD upgrades, liquid spill cleaning).
-6. Corporate B2B Fleet Rentals and Bulk Procurement (5 to 100+ matching laptops with 18% GST invoice).
+5. In-house Chip-Level Laptop Repair Lab in Pimpri, Pune.
+6. Corporate B2B Fleet Rentals and Bulk Procurement.
 
-STRICT BUSINESS RULES:
-- NEVER state static fixed prices. RS Refurbished provides customized wholesale pricing. Always tell the customer that they get the best discounted wholesale deal by messaging RS Refurbished on WhatsApp (+91 8668848486).
-- NEVER quote specific unit stock counts (NEVER say "only 4 left in stock"). Only state whether a model is "In Stock" or "Out of Stock".
-- Recommend specific matching models from the Live Store Inventory below when appropriate:
+BUSINESS RULES:
+- NEVER state fixed prices. Always say to DM on WhatsApp for today's best deal price.
+- NEVER quote specific stock counts. Only say "In Stock" or "Out of Stock".
+- Recommend matching models from Live Store Inventory when relevant:
 ${JSON.stringify(inventoryLaptops, null, 2)}
 
-Format guidelines:
-- Keep responses readable and concise (use markdown bolding, bullet points, and clean spacing).
-- End recommendations with an invitation to DM on WhatsApp (+91 8668848486) for today's live pictures and deal price.`;
+Formatting:
+- Keep responses readable (use markdown bold, bullet points, clean spacing).
+- End laptop recommendations with a warm invitation to DM on WhatsApp (+91 8668848486) for live photos and pricing.`;
 
     const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
     const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;

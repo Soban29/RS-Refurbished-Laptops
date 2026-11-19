@@ -27,7 +27,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
     {
       id: 'welcome-1',
       sender: 'ai',
-      text: "👋 Hi! I'm your **RS AI Laptop Advisor**, powered by **Google Gemini LLM**.\n\nWhether you're browsing on your phone or laptop/PC, I'm here to match you with certified refurbished laptops, diagnose hardware repair issues, or help with corporate bulk orders.\n\nWhat kind of laptop or IT solution are you looking for today?",
+      text: "👋 Hey there! I'm your **RS Store Assistant** — think of me as your knowledgeable friend at RS Refurbished.\n\nI can help you pick the right laptop, answer any questions, suggest accessories, or talk about repairs & upgrades. I'm here for a good chat!\n\nWhat's on your mind today?",
       quickChips: [
         "💻 Best for Coding / Dev",
         "💼 Dell Latitude 7420 i7",
@@ -388,7 +388,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
             className="mb-2.5 max-w-[280px] sm:max-w-xs bg-white text-slate-900 px-3.5 py-2 rounded-2xl shadow-xl border border-brand-200 text-xs font-semibold flex items-center gap-2 cursor-pointer hover:bg-slate-50 transition-all animate-bounce"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></span>
-            <span className="truncate">👋 Need laptop help? Ask RS Gemini AI!</span>
+            <span className="truncate">👋 Need help? Chat with our AI assistant!</span>
             <button 
               onClick={(e) => { e.stopPropagation(); setShowTeaser(false); }}
               className="text-slate-400 hover:text-slate-600 ml-1 p-0.5 flex-shrink-0"
@@ -402,7 +402,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
         {/* The Action Button */}
         <button
           onClick={() => setIsOpen(!isOpen)}
-          className={`flex items-center gap-2 px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full shadow-2xl transition-all duration-300 transform active:scale-95 ${
+          className={`flex items-center justify-center w-14 h-14 rounded-full shadow-2xl transition-all duration-300 transform active:scale-95 ${
             isOpen 
               ? 'bg-slate-900 text-white hover:bg-slate-800' 
               : 'bg-gradient-to-r from-brand-600 via-brand-500 to-cyanAccent-500 hover:from-brand-700 hover:to-cyanAccent-600 text-white hover:shadow-glow-md hover:scale-105'
@@ -412,17 +412,14 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
         >
           {isOpen ? (
             <>
-              <X className="w-4 h-4 sm:w-5 sm:h-5" />
-              <span className="text-xs font-bold">Close</span>
+              <X className="w-5 h-5 sm:w-6 sm:h-6" />
             </>
           ) : (
             <>
               <div className="relative">
-                <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
                 <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-emerald-400 rounded-full ring-2 ring-brand-600 animate-pulse"></span>
               </div>
-              <span className="text-xs font-extrabold tracking-wide">RS Gemini AI</span>
-              <Sparkles className="w-3.5 h-3.5 text-amber-300" />
             </>
           )}
         </button>
@@ -448,13 +445,13 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
               </div>
               <div>
                 <div className="flex items-center gap-1.5">
-                  <h3 className="text-xs sm:text-sm font-bold tracking-tight">RS AI Laptop Advisor</h3>
-                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-amber-400 text-slate-950 tracking-wider">
-                    Gemini
+                  <h3 className="text-xs sm:text-sm font-bold tracking-tight">RS Store Assistant</h3>
+                  <span className="text-[9px] font-black uppercase px-1.5 py-0.2 rounded bg-emerald-400 text-slate-950 tracking-wider">
+                    Live
                   </span>
                 </div>
                 <p className="text-[10px] text-slate-300 font-medium">
-                  {geminiBackendConfigured ? '⚡ Powered by Google Gemini LLM' : 'Refurbished Tech & Repair Expert'}
+                  Refurbished Tech &amp; Repair Expert
                 </p>
               </div>
             </div>
@@ -619,7 +616,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
             {isTyping && (
               <div className="flex items-center gap-2 text-slate-500 text-xs italic p-2.5 bg-white/80 rounded-xl max-w-[140px] animate-pulse shadow-2xs border border-slate-100">
                 <Bot className="w-3.5 h-3.5 text-brand-600 animate-spin" />
-                <span>Gemini thinking...</span>
+                <span>RS Assistant typing...</span>
               </div>
             )}
 
@@ -634,7 +631,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
                 value={inputQuery}
                 onChange={(e) => setInputQuery(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="Ask Gemini about laptops, specs, repair..."
+                placeholder="Ask me anything — laptops, repairs, advice..."
                 className="flex-1 text-xs px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
               />
               <button
@@ -652,7 +649,7 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
             </div>
             
             <div className="flex items-center justify-between text-[10px] text-slate-400 mt-2 px-1">
-              <span>Google Gemini AI • Desktop & Mobile</span>
+              <span>RS Store Assistant • Always here to help</span>
               <a
                 href={`https://wa.me/${RS_WHATSAPP_NUMBER}?text=Hi%20RS%20Refurbished%2C%20I%20have%20an%20inquiry`}
                 target="_blank"

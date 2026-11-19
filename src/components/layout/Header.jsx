@@ -182,12 +182,12 @@ export default function Header({
               </svg>
             </a>
 
-            {/* Add Cart / Shopping Cart Icon Button (styled just like WhatsApp & Login icon) */}
+            {/* Shortlist Icon Button (styled just like WhatsApp & Login icon) */}
             <button
               onClick={onOpenCart}
               className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-600 border border-brand-200 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 group"
-              title="View Shopping Cart & Quote Tray"
-              aria-label="Shopping Cart"
+              title="View My Shortlist"
+              aria-label="My Shortlist"
             >
               <ShoppingCart className="w-5 h-5 text-brand-600 group-hover:text-brand-700 transition-transform group-hover:scale-110" />
               {cartCount > 0 && (
@@ -288,7 +288,7 @@ export default function Header({
                         className="w-full mt-1.5 flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors text-left"
                       >
                         <ShoppingBag className="w-4 h-4 text-brand-600" />
-                        <span>My Quote Tray</span>
+                        <span>My Shortlist</span>
                       </button>
                       <button
                         onClick={() => {
@@ -359,7 +359,7 @@ export default function Header({
               >
                 <div className="flex items-center gap-2">
                   <ShoppingCart className="w-4 h-4 text-brand-600" />
-                  <span>Shopping Cart / Quote Tray</span>
+                  <span>My Shortlist</span>
                 </div>
                 {cartCount > 0 && (
                   <span className="px-2 py-0.5 text-[10px] font-black bg-rose-600 text-white rounded-full">

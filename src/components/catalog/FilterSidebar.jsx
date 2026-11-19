@@ -23,17 +23,8 @@ export default function FilterSidebar({
   activeFilterCount,
   availableBrands,
   totalResults,
-  facetCounts = {},
-  priceStats = { minPrice: 10000, maxPrice: 100000, overallMin: 10000, overallMax: 100000 }
+  facetCounts = {}
 }) {
-  const pricePresets = [
-    { label: "All Prices", min: 0, max: 200000 },
-    { label: "Under ₹20,000", min: 0, max: 20000 },
-    { label: "₹20k - ₹30k", min: 20000, max: 30000 },
-    { label: "₹30k - ₹45k", min: 30000, max: 45000 },
-    { label: "Above ₹45,000", min: 45000, max: 200000 },
-  ];
-
   const processorOptions = [
     "Intel Core i3",
     "Intel Core i5",
@@ -54,7 +45,6 @@ export default function FilterSidebar({
   const getBrandCount = (b) => facetCounts.brands?.[b] ?? 0;
   const getScreenCount = (s) => facetCounts.screens?.[s] ?? 0;
   const getGradeCount = (g) => facetCounts.grades?.[g] ?? 0;
-  const getPresetCount = (idx) => facetCounts.pricePresets?.[idx] ?? 0;
 
   // Toggle handlers with intelligent price range synchronization
   const toggleBrand = (brand) => {
@@ -181,77 +171,6 @@ export default function FilterSidebar({
           >
             Out of Stock ({facetCounts.availability?.outOfStock ?? 0})
           </button>
-        </div>
-      </div>
-
-      <div className="border-t border-slate-100" />
-
-      {/* 1. Dynamic Price Filter & Range Synchronization */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
-            <Tag className="w-3.5 h-3.5 text-brand-600" /> Price Range
-          </label>
-          <span className="text-xs font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded">
-            Up to {formatINR(filters.maxPrice)}
-          </span>
-        </div>
-
-        {/* Dynamic Price Range Indicator for selected specs */}
-        {hasSelectedSpecs && priceStats.minPrice !== Infinity && (
-          <div className="bg-brand-50/70 border border-brand-200/80 rounded-xl px-3 py-2 text-[11px] text-brand-900 flex items-center justify-between">
-            <span className="text-slate-500 font-medium">Selected Specs Price:</span>
-            <span className="font-extrabold text-brand-700">
-              {formatINR(priceStats.minPrice)} – {formatINR(priceStats.maxPrice)}
-            </span>
-          </div>
-        )}
-
-        {/* Range Slider */}
-        <input
-          type="range"
-          min="10000"
-          max={Math.max(100000, priceStats.maxPrice || 100000)}
-          step="2500"
-          value={filters.maxPrice}
-          onChange={(e) => setFilters(prev => ({ ...prev, maxPrice: Number(e.target.value) }))}
-          className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-brand-600"
-        />
-        <div className="flex justify-between text-[11px] text-slate-400 font-medium">
-          <span>₹10,000</span>
-          <span>₹50,000</span>
-          <span>₹1,00,000</span>
-        </div>
-
-        {/* Quick Presets with Dynamic Counts */}
-        <div className="flex flex-wrap gap-1.5 pt-1">
-          {pricePresets.map((preset, idx) => {
-            const isSelected = filters.minPrice === preset.min && filters.maxPrice === preset.max;
-            const count = getPresetCount(idx);
-            const isZero = count === 0 && !isSelected;
-
-            return (
-              <button
-                key={idx}
-                onClick={() => setFilters(prev => ({ ...prev, minPrice: preset.min, maxPrice: preset.max }))}
-                disabled={isZero}
-                className={`text-[11px] px-2.5 py-1 rounded-md font-medium transition-all flex items-center gap-1 ${
-                  isSelected
-                    ? 'bg-brand-600 text-white font-semibold shadow-xs'
-                    : isZero
-                    ? 'bg-slate-100 text-slate-400 opacity-60 cursor-not-allowed border border-dashed border-slate-200'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                }`}
-              >
-                <span>{preset.label}</span>
-                {count > 0 && (
-                  <span className={`text-[10px] ${isSelected ? 'text-brand-100' : 'text-slate-400'}`}>
-                    ({count})
-                  </span>
-                )}
-              </button>
-            );
-          })}
         </div>
       </div>
 

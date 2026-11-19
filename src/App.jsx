@@ -7,6 +7,7 @@ import CorporateSolutions from './components/b2b/CorporateSolutions';
 import RepairServices from './components/services/RepairServices';
 import TrustBadges from './components/common/TrustBadges';
 import Testimonials from './components/common/Testimonials';
+import CustomerReviews from './components/common/CustomerReviews';
 import QuoteCartDrawer from './components/cart/QuoteCartDrawer';
 import AdminModal from './components/admin/AdminModal';
 import AuthModal from './components/auth/AuthModal';
@@ -323,12 +324,15 @@ export default function App() {
         {/* 7. Testimonials, Ratings & FAQs */}
         <Testimonials />
 
+        {/* 8. Customer Reviews */}
+        <CustomerReviews />
+
       </main>
 
       {/* 8. Footer */}
       <Footer onNavClick={scrollToSection} />
 
-      {/* Quote / Cart Inquiry Drawer */}
+      {/* Quote / Shortlist Enquiry Drawer */}
       <QuoteCartDrawer
         isOpen={isCartOpen}
         onClose={() => setIsCartOpen(false)}
@@ -433,7 +437,7 @@ export default function App() {
               </span>
             )}
           </div>
-          <span>Cart</span>
+          <span>Shortlist</span>
         </button>
       </nav>
 

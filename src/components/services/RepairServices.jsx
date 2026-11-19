@@ -17,7 +17,6 @@ import {
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { REPAIR_SERVICES } from '../../data/servicesData';
-import { formatINR } from '../../utils/storage';
 
 export default function RepairServices({ onServiceTicketSubmit }) {
   const [bookingForm, setBookingForm] = useState({
@@ -130,20 +129,22 @@ export default function RepairServices({ onServiceTicketSubmit }) {
                 </div>
               </div>
 
-              {/* Bottom Price & TAT */}
+              {/* Bottom TAT & WhatsApp CTA */}
               <div className="mt-6 pt-3 border-t border-slate-100 flex items-center justify-between">
-                <div>
-                  <span className="text-[10px] text-slate-400 block font-semibold uppercase">Starting From</span>
-                  <span className="text-base font-extrabold text-slate-900">
-                    {formatINR(serv.startingPrice)} {serv.unit && <span className="text-xs text-slate-500 font-normal">/{serv.unit}</span>}
-                  </span>
-                </div>
-                <div className="text-right">
+                <div className="text-left">
                   <span className="text-[10px] text-slate-400 block font-semibold uppercase">Turnaround</span>
                   <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
                     {serv.turnaround}
                   </span>
                 </div>
+                <a
+                  href={`https://wa.me/918668848486?text=Hi%20RS%2C%20I%20need%20a%20quote%20for%20${encodeURIComponent(serv.title)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition-colors shadow-sm"
+                >
+                  💬 DM on WhatsApp
+                </a>
               </div>
 
             </div>
