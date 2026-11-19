@@ -182,21 +182,6 @@ export default function Header({
               </svg>
             </a>
 
-            {/* Shortlist Icon Button (styled just like WhatsApp & Login icon) */}
-            <button
-              onClick={onOpenCart}
-              className="relative flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-600 border border-brand-200 shadow-sm hover:shadow-md transition-all hover:scale-105 active:scale-95 group"
-              title="View My Shortlist"
-              aria-label="My Shortlist"
-            >
-              <ShoppingCart className="w-5 h-5 text-brand-600 group-hover:text-brand-700 transition-transform group-hover:scale-110" />
-              {cartCount > 0 && (
-                <span className="absolute -top-1.5 -right-1.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-black text-white bg-rose-600 rounded-full shadow-md animate-bounce ring-2 ring-white">
-                  {cartCount}
-                </span>
-              )}
-            </button>
-
             {/* User Login / Profile / Owner Portal Icon (No explicit "Admin Panel" button) */}
             <div className="relative" ref={userMenuRef}>
               {!currentUser ? (
@@ -283,16 +268,6 @@ export default function Header({
                       <button
                         onClick={() => {
                           setUserMenuOpen(false);
-                          onOpenCart();
-                        }}
-                        className="w-full mt-1.5 flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-xl transition-colors text-left"
-                      >
-                        <ShoppingBag className="w-4 h-4 text-brand-600" />
-                        <span>My Shortlist</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setUserMenuOpen(false);
                           onLogout();
                         }}
                         className="w-full mt-1 flex items-center gap-2.5 px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-50 rounded-xl transition-colors text-left"
@@ -350,24 +325,6 @@ export default function Header({
             
             {/* Mobile Quick Actions */}
             <div className="pt-3 mt-2 border-t border-slate-100 flex flex-col gap-2">
-              <button
-                onClick={() => {
-                  setMobileMenuOpen(false);
-                  onOpenCart();
-                }}
-                className="flex items-center justify-between px-3 py-2.5 text-xs font-bold text-brand-800 bg-brand-50 border border-brand-200 rounded-xl"
-              >
-                <div className="flex items-center gap-2">
-                  <ShoppingCart className="w-4 h-4 text-brand-600" />
-                  <span>My Shortlist</span>
-                </div>
-                {cartCount > 0 && (
-                  <span className="px-2 py-0.5 text-[10px] font-black bg-rose-600 text-white rounded-full">
-                    {cartCount}
-                  </span>
-                )}
-              </button>
-
               <a
                 href="https://wa.me/918668848486?text=Hi%20RS%20Refurbished%2C%20I%20have%20an%20inquiry"
                 target="_blank"

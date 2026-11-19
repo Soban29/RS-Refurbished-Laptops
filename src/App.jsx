@@ -424,21 +424,6 @@ export default function App() {
           </svg>
           <span>WhatsApp</span>
         </a>
-
-        <button
-          onClick={() => setIsCartOpen(true)}
-          className="relative flex flex-col items-center justify-center gap-0.5 min-w-[54px] py-1 text-[11px] font-bold text-slate-700 hover:text-brand-600 transition-colors"
-        >
-          <div className="relative">
-            <ShoppingCart className="w-4 h-4 text-brand-600" />
-            {cart.length > 0 && (
-              <span className="absolute -top-1.5 -right-2 flex items-center justify-center min-w-[15px] h-[15px] px-0.5 text-[8.5px] font-black text-white bg-rose-600 rounded-full ring-2 ring-white animate-pulse">
-                {cart.length}
-              </span>
-            )}
-          </div>
-          <span>Shortlist</span>
-        </button>
       </nav>
 
       {/* 9. RS AI Laptop Advisor & Assistant (Desktop, Laptop/PC & Mobile Responsive) */}

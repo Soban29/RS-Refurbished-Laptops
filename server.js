@@ -927,8 +927,13 @@ Formatting:
 - Keep responses readable (use markdown bold, bullet points, clean spacing).
 - End laptop recommendations with a warm invitation to DM on WhatsApp (+91 8668848486) for live photos and pricing.`;
 
-    const modelName = process.env.GEMINI_MODEL || 'gemini-1.5-flash';
-    const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`;
+    const candidateModels = [
+      process.env.GEMINI_MODEL,
+      'gemini-3.7-flash',
+      'gemini-2.5-flash',
+      'gemini-flash-latest',
+      'gemini-1.5-flash'
+    ].filter(Boolean);
 
     // Format chat history for Gemini API
     const formattedContents = [];
@@ -958,35 +963,48 @@ Formatting:
       }
     };
 
-    const response = await fetch(geminiUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(geminiPayload)
-    });
+    let replyText = '';
+    let usedModel = '';
 
-    if (!response.ok) {
-      const errBody = await response.text();
-      console.error('Gemini API Error:', response.status, errBody);
+    for (const modelToTry of candidateModels) {
+      try {
+        const geminiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${modelToTry}:generateContent?key=${apiKey}`;
+        const response = await fetch(geminiUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(geminiPayload)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const textCandidate = data.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (textCandidate && textCandidate.trim()) {
+            replyText = textCandidate.trim();
+            usedModel = modelToTry;
+            break;
+          }
+        } else {
+          const errBody = await response.text();
+          console.warn(`Gemini model ${modelToTry} failed (${response.status}):`, errBody.slice(0, 150));
+        }
+      } catch (callErr) {
+        console.warn(`Gemini model ${modelToTry} network error:`, callErr.message);
+      }
+    }
+
+    if (!replyText) {
       return res.json({
         success: false,
         fallback: true,
         reason: 'API_ERROR',
-        status: response.status,
-        error: 'Failed to contact Gemini API. Using smart built-in advisor.'
+        error: 'All Gemini model candidates failed or returned empty.'
       });
-    }
-
-    const data = await response.json();
-    const replyText = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-    if (!replyText) {
-      return res.json({ success: false, fallback: true, reason: 'EMPTY_RESPONSE' });
     }
 
     return res.json({
       success: true,
       reply: replyText,
-      model: modelName
+      model: usedModel
     });
 
   } catch (error) {

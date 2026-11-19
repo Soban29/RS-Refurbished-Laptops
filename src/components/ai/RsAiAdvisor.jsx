@@ -283,20 +283,20 @@ export default function RsAiAdvisor({ laptops = [], onOpenLaptopDetail, onScroll
       };
     }
 
-    // 10. General / Budget Recommendation Fallback
-    const featuredLaptops = laptops.filter(l => l.featured && l.inStock);
-    const displayLaptops = featuredLaptops.length > 0 ? featuredLaptops.slice(0, 3) : laptops.slice(0, 3);
+    // 10. Natural Conversational Fallback (for any general questions, chat, greetings, advice)
+    const friendlyReplies = [
+      `That's an interesting question! While our primary specialty here at RS Refurbished is certified business laptops (like Dell Latitude & HP ProBook), hardware upgrades, and chip-level repairs in Pune, I'm happy to chat about anything. If there is any tech, laptop spec, or setup you need help with, let me know!`,
+      `I hear you! Whether you need tech advice, help picking the right machine for work/studies, or just exploring, I'm here. For specific customized deals or detailed queries, you can also ping our live desk on WhatsApp (+91 8668848486).`,
+      `Got it! Let me know if you also want any recommendations on fast SSDs, high-RAM laptops for multitasking, or our 1-Month Testing Warranty certified laptops. What else can I help you with today?`
+    ];
+    const randomReply = friendlyReplies[Math.floor(Math.random() * friendlyReplies.length)];
 
     return {
-      text: "✨ Here are our **top certified refurbished laptops** currently in stock. Each comes with a 1-Month Testing Warranty, genuine activated OS, and 32-point inspection certification:",
-      recommendedLaptops: displayLaptops,
+      text: randomReply,
       quickChips: [
-        "💻 Coding / Developer Laptops",
-        "💼 Dell Latitude 7420 i7",
-        "⚡ HP ProBook Touchscreen",
-        "🖥️ 15.6\" FHD Big Screen",
-        "🔧 Laptop Repair Lab",
-        "💬 DM on WhatsApp"
+        "💻 Browse Available Laptops",
+        "🔧 Laptop Repair Consultation",
+        "💬 Chat on WhatsApp (+91 8668848486)"
       ]
     };
   };
